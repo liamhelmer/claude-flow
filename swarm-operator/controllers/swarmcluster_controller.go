@@ -180,6 +180,14 @@ func (r *SwarmClusterReconciler) handleInitializingPhase(ctx context.Context, sw
 	log := log.FromContext(ctx)
 	log.Info("Handling Initializing phase")
 
+	// Create SwarmMemoryStore if SQLite is configured
+	if swarmCluster.Spec.Memory.Type == "sqlite" && swarmCluster.Spec.Memory.EnableMemoryStore {
+		if err := r.ensureSwarmMemoryStore(ctx, swarmCluster); err != nil {
+			log.Error(err, "Failed to ensure SwarmMemoryStore")
+			return ctrl.Result{}, err
+		}
+	}
+
 	// Get current agents
 	agentList := &swarmv1alpha1.AgentList{}
 	if err := r.List(ctx, agentList, client.InNamespace(swarmCluster.Namespace), 
@@ -658,10 +666,92 @@ func (r *SwarmClusterReconciler) finalizeSwarmCluster(ctx context.Context, swarm
 	return nil
 }
 
+// ensureSwarmMemoryStore creates or updates the SwarmMemoryStore for this cluster
+func (r *SwarmClusterReconciler) ensureSwarmMemoryStore(ctx context.Context, swarmCluster *swarmv1alpha1.SwarmCluster) error {
+	log := log.FromContext(ctx)
+	
+	// Define the SwarmMemoryStore
+	memoryStore := &swarmv1alpha1.SwarmMemoryStore{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      swarmCluster.Name + "-memory",
+			Namespace: r.getNamespaceForComponent(swarmCluster, "memory"),
+			Labels: map[string]string{
+				"swarm-cluster": swarmCluster.Name,
+				"component":     "memory",
+			},
+		},
+		Spec: swarmv1alpha1.SwarmMemoryStoreSpec{
+			Type:            "sqlite",
+			SwarmID:         swarmCluster.Name,
+			SwarmClusterRef: swarmCluster.Name,
+			StorageSize:     swarmCluster.Spec.Memory.Size,
+			Version:         "latest",
+			MCPMode:         true,
+		},
+	}
+	
+	// Apply SQLite-specific configuration if provided
+	if swarmCluster.Spec.Memory.SQLiteConfig != nil {
+		memoryStore.Spec.CacheSize = swarmCluster.Spec.Memory.SQLiteConfig.CacheSize
+		memoryStore.Spec.CacheMemoryMB = swarmCluster.Spec.Memory.SQLiteConfig.CacheMemoryMB
+		memoryStore.Spec.EnableWAL = swarmCluster.Spec.Memory.SQLiteConfig.EnableWAL
+		memoryStore.Spec.EnableVacuum = swarmCluster.Spec.Memory.SQLiteConfig.EnableVacuum
+		memoryStore.Spec.GCInterval = swarmCluster.Spec.Memory.SQLiteConfig.GCInterval
+		memoryStore.Spec.BackupInterval = swarmCluster.Spec.Memory.SQLiteConfig.BackupInterval
+	}
+	
+	// Set controller reference
+	if err := controllerutil.SetControllerReference(swarmCluster, memoryStore, r.Scheme); err != nil {
+		return err
+	}
+	
+	// Check if SwarmMemoryStore already exists
+	found := &swarmv1alpha1.SwarmMemoryStore{}
+	err := r.Get(ctx, types.NamespacedName{Name: memoryStore.Name, Namespace: memoryStore.Namespace}, found)
+	if err != nil && errors.IsNotFound(err) {
+		log.Info("Creating SwarmMemoryStore", "name", memoryStore.Name)
+		if err := r.Create(ctx, memoryStore); err != nil {
+			return err
+		}
+		r.Recorder.Event(swarmCluster, corev1.EventTypeNormal, "MemoryStoreCreated", "Created SQLite memory store")
+	} else if err != nil {
+		return err
+	} else {
+		// Update if needed
+		log.Info("SwarmMemoryStore already exists", "name", memoryStore.Name)
+		// Could add update logic here if spec changes
+	}
+	
+	return nil
+}
+
+// getNamespaceForComponent returns the appropriate namespace for a component
+func (r *SwarmClusterReconciler) getNamespaceForComponent(cluster *swarmv1alpha1.SwarmCluster, component string) string {
+	// Check if cluster has namespace configuration
+	if cluster.Spec.NamespaceConfig != nil {
+		switch component {
+		case "hivemind", "consensus":
+			if cluster.Spec.NamespaceConfig.HiveMindNamespace != "" {
+				return cluster.Spec.NamespaceConfig.HiveMindNamespace
+			}
+			return r.HiveMindNamespace
+		default:
+			if cluster.Spec.NamespaceConfig.SwarmNamespace != "" {
+				return cluster.Spec.NamespaceConfig.SwarmNamespace
+			}
+			return r.SwarmNamespace
+		}
+	}
+	
+	// Default to cluster's namespace if no specific config
+	return cluster.Namespace
+}
+
 // SetupWithManager sets up the controller with the Manager.
 func (r *SwarmClusterReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&swarmv1alpha1.SwarmCluster{}).
 		Owns(&swarmv1alpha1.Agent{}).
+		Owns(&swarmv1alpha1.SwarmMemoryStore{}).
 		Complete(r)
 }

@@ -155,7 +155,9 @@ type AgentTemplateSpec struct {
 
 // MemorySpec defines distributed memory configuration
 type MemorySpec struct {
-	// Type of memory backend (redis, hazelcast, etcd)
+	// Type of memory backend (sqlite, redis, hazelcast, etcd)
+	// +kubebuilder:validation:Enum=sqlite;redis;hazelcast;etcd
+	// +kubebuilder:default=sqlite
 	Type string `json:"type,omitempty"`
 
 	// Size of memory allocation
@@ -172,6 +174,38 @@ type MemorySpec struct {
 
 	// Compression enables memory compression
 	Compression bool `json:"compression,omitempty"`
+
+	// SQLiteConfig for SQLite-specific settings
+	SQLiteConfig *SQLiteMemoryConfig `json:"sqliteConfig,omitempty"`
+
+	// EnableMemoryStore creates a SwarmMemoryStore resource
+	EnableMemoryStore bool `json:"enableMemoryStore,omitempty"`
+}
+
+// SQLiteMemoryConfig defines SQLite-specific memory configuration
+type SQLiteMemoryConfig struct {
+	// CacheSize is the maximum number of entries to cache
+	// +kubebuilder:default=1000
+	CacheSize int `json:"cacheSize,omitempty"`
+
+	// CacheMemoryMB is the maximum memory for caching
+	// +kubebuilder:default=50
+	CacheMemoryMB int `json:"cacheMemoryMB,omitempty"`
+
+	// EnableWAL enables Write-Ahead Logging
+	// +kubebuilder:default=true
+	EnableWAL bool `json:"enableWAL,omitempty"`
+
+	// EnableVacuum enables automatic vacuuming
+	// +kubebuilder:default=true
+	EnableVacuum bool `json:"enableVacuum,omitempty"`
+
+	// GCInterval for garbage collection
+	// +kubebuilder:default="5m"
+	GCInterval string `json:"gcInterval,omitempty"`
+
+	// BackupInterval for automatic backups
+	BackupInterval string `json:"backupInterval,omitempty"`
 }
 
 // NeuralSpec defines neural network configuration

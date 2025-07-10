@@ -1,0 +1,172 @@
+# Example SwarmCluster with SQLite memory persistence
+# This demonstrates the new SQLite-based memory store integration
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: claude-flow-swarm
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: claude-flow-hivemind
+---
+# SwarmCluster with SQLite memory configuration
+apiVersion: swarm.claudeflow.io/v1alpha1
+kind: SwarmCluster
+metadata:
+  name: sqlite-memory-cluster
+  namespace: claude-flow-swarm
+spec:
+  # Topology configuration
+  topology: mesh
+  queenMode: distributed
+  strategy: adaptive
+  
+  # Agent configuration
+  minAgents: 3
+  maxAgents: 10
+  
+  # Namespace configuration
+  namespaceConfig:
+    swarmNamespace: claude-flow-swarm
+    hiveMindNamespace: claude-flow-hivemind
+    createNamespaces: true
+  
+  # Memory configuration with SQLite
+  memory:
+    type: sqlite
+    size: "20Gi"
+    persistence: true
+    enableMemoryStore: true
+    sqliteConfig:
+      cacheSize: 2000
+      cacheMemoryMB: 100
+      enableWAL: true
+      enableVacuum: true
+      gcInterval: "10m"
+      backupInterval: "1h"
+  
+  # GitHub App configuration (if needed)
+  githubApp:
+    appID: 123456
+    privateKeyRef:
+      name: github-app-key
+      key: private-key
+    tokenTTL: "1h"
+  
+  # Agent template
+  agentTemplate:
+    image: "claudeflow/swarm-executor:latest"
+    capabilities:
+      - code-analysis
+      - pattern-recognition
+      - task-coordination
+    resources:
+      cpu: "200m"
+      memory: "512Mi"
+  
+  # Autoscaling configuration
+  autoscaling:
+    enabled: true
+    targetUtilization: 70
+    scaleUpThreshold: 80
+    scaleDownThreshold: 30
+    stabilizationWindow: "60s"
+    metrics:
+    - type: cpu
+      target: "70"
+    - type: memory
+      target: "80"
+    - type: custom
+      name: pending_tasks
+      target: "5"
+  
+  # Neural configuration
+  neural:
+    enabled: true
+    models:
+    - name: pattern-detector
+      type: pattern-recognition
+      path: /models/pattern-detector
+    acceleration: wasm-simd
+    trainingEnabled: true
+  
+  # Monitoring
+  monitoring:
+    enabled: true
+    metricsPort: 9090
+---
+# Example SwarmTask that uses the memory
+apiVersion: swarm.claudeflow.io/v1alpha1
+kind: SwarmTask
+metadata:
+  name: memory-test-task
+  namespace: claude-flow-swarm
+spec:
+  swarmCluster: sqlite-memory-cluster
+  type: analysis
+  description: "Test SQLite memory storage and retrieval"
+  
+  # This task will have access to the persistent SQLite memory
+  parameters:
+    action: "memory-operations"
+    operations:
+    - store: 
+        key: "project-analysis"
+        value: "Initial project scan complete"
+        namespace: "analysis"
+        tags: ["scan", "initial"]
+        ttl: 3600
+    - retrieve:
+        key: "project-analysis"
+        namespace: "analysis"
+    - search:
+        pattern: "project-*"
+        namespace: "analysis"
+        limit: 10
+  
+  # Repository access (if needed)
+  repositories:
+  - "claude-flow/test-repo"
+  
+  subtasks:
+  - name: test-memory-store
+    type: code-review
+    description: "Store analysis results in SQLite memory"
+    requiredCapabilities:
+      - pattern-recognition
+      - memory-access
+  
+  - name: test-memory-retrieve
+    type: analysis
+    description: "Retrieve and process stored patterns"
+    requiredCapabilities:
+      - memory-access
+      - data-processing
+---
+# SwarmMemory entry example (individual memory item)
+apiVersion: swarm.claudeflow.io/v1alpha1
+kind: SwarmMemory
+metadata:
+  name: initial-pattern
+  namespace: claude-flow-swarm
+spec:
+  clusterRef: sqlite-memory-cluster
+  namespace: patterns
+  type: pattern
+  key: "optimization-pattern-001"
+  value: |
+    {
+      "pattern": "parallel-processing",
+      "confidence": 0.92,
+      "conditions": ["large-dataset", "cpu-intensive"],
+      "strategy": "worker-threads",
+      "learned_at": "2025-01-10T10:00:00Z"
+    }
+  ttl: 0  # Permanent
+  tags:
+  - optimization
+  - performance
+  - parallel
+  priority: 90
+  sharedWith: []  # Available to all agents
