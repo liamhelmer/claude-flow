@@ -3,7 +3,7 @@
 <div align="center">
 
 [![🌟 Star on GitHub](https://img.shields.io/github/stars/ruvnet/claude-code-flow?style=for-the-badge&logo=github&color=gold)](https://github.com/ruvnet/claude-code-flow)
-[![📦 Alpha Release](https://img.shields.io/npm/v/claude-flow/alpha?style=for-the-badge&logo=npm&color=orange&label=v2.0.0-alpha)](https://www.npmjs.com/package/claude-flow)
+[![📦 Alpha Release](https://img.shields.io/npm/v/claude-flow/alpha?style=for-the-badge&logo=npm&color=orange&label=v2.0.0-alpha)](https://www.npmjs.com/package/claude-flow/v/alpha)
 [![⚡ Claude Code](https://img.shields.io/badge/Claude%20Code-Optimized-green?style=for-the-badge&logo=anthropic)](https://github.com/ruvnet/claude-code-flow)
 [![🏛️ Agentics Foundation](https://img.shields.io/badge/Agentics-Foundation-crimson?style=for-the-badge&logo=openai)](https://discord.agentics.org)
 [![🐝 Hive-Mind](https://img.shields.io/badge/Hive--Mind-AI%20Coordination-purple?style=for-the-badge&logo=swarm)](https://github.com/ruvnet/claude-code-flow)
@@ -31,28 +31,24 @@
 
 > 🔥 **Revolutionary AI Coordination**: Build faster, smarter, and more efficiently with AI-powered development orchestration
 
-## 📚 **Table of Contents**
-
-- [⚡ Quick Start](#-try-v200-alpha-in-4-commands)
-- [🪝 Advanced Hooks System](#-advanced-hooks-system)
-- [🧠 Neural Features](#neural-features)
-- [🔧 DAA MCP Endpoints](#-daa-mcp-endpoints)
-- [🐝 Hive-Mind Intelligence](#-revolutionary-hive-mind-intelligence)
-- [🔧 Hive-Mind Optimization](#-hive-mind-database-optimization)
-- [⚡ 87 Advanced MCP Tools](#-87-advanced-mcp-tools)
-- [🎮 Advanced Usage Examples](#-advanced-usage-examples)
-- [🏗️ Architecture Overview](#️-alpha-architecture-overview)
-- [🛠️ Installation & Setup](#️-alpha-installation--setup)
-- [📖 Documentation](#-comprehensive-documentation)
-- [🤝 Contributing](#-contributing-to-alpha)
-- [📜 License](#-license)
-
 ## ⚡ **Try v2.0.0 Alpha in 4 Commands**
+
+### 📋 **Prerequisites**
+
+⚠️ **IMPORTANT**: Claude Code must be installed first:
+
+```bash
+# 1. Install Claude Code globally
+npm install -g @anthropic-ai/claude-code
+
+# 2. Activate Claude Code with permissions
+claude --dangerously-skip-permissions
+```
 
 ### 🎯 **Instant Alpha Testing**
 
 ```bash
-# 1. Initialize with enhanced MCP setup (auto-configures permissions!)
+# 1. Initialize Claude Flow with enhanced MCP setup (auto-configures permissions!)
 npx --y claude-flow@alpha init --force
 
 # 2. Explore all revolutionary capabilities  
@@ -819,6 +815,18 @@ npx --y claude-flow@alpha init --force
 [![GitHub](https://img.shields.io/badge/GitHub-Alpha%20Branch-blue?style=for-the-badge&logo=github)](https://github.com/ruvnet/claude-code-flow/tree/claude-flow-v2.0.0)
 [![NPM Alpha](https://img.shields.io/badge/NPM-Alpha%20Release-orange?style=for-the-badge&logo=npm)](https://www.npmjs.com/package/claude-flow/v/alpha)
 [![Discord](https://img.shields.io/badge/Discord-Agentics%20Community-purple?style=for-the-badge&logo=discord)](https://discord.agentics.org)
+
+---
+
+## Star History
+
+<a href="https://www.star-history.com/#ruvnet/claude-flow&Date">
+ <picture>
+   <source media="(prefers-color-scheme: dark)" srcset="https://api.star-history.com/svg?repos=ruvnet/claude-flow&type=Date&theme=dark" />
+   <source media="(prefers-color-scheme: light)" srcset="https://api.star-history.com/svg?repos=ruvnet/claude-flow&type=Date" />
+   <img alt="Star History Chart" src="https://api.star-history.com/svg?repos=ruvnet/claude-flow&type=Date" />
+ </picture>
+</a>
 
 ---
 
