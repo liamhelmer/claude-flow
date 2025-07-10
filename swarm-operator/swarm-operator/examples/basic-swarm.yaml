@@ -2,7 +2,7 @@ apiVersion: swarm.claudeflow.io/v1alpha1
 kind: SwarmCluster
 metadata:
   name: my-first-swarm
-  namespace: default
+  namespace: claude-flow-swarm
 spec:
   topology: mesh
   agentCount: 3
@@ -29,7 +29,7 @@ apiVersion: swarm.claudeflow.io/v1alpha1
 kind: SwarmTask
 metadata:
   name: analyze-project
-  namespace: default
+  namespace: claude-flow-swarm
 spec:
   swarmRef: my-first-swarm
   task: "Analyze the kubernetes operator project structure and create a summary report"

@@ -4,7 +4,7 @@ apiVersion: swarm.cloudflow.io/v1alpha1
 kind: Swarm
 metadata:
   name: hierarchical-swarm
-  namespace: default
+  namespace: claude-flow-swarm
   labels:
     app: example
     environment: production
@@ -136,7 +136,7 @@ apiVersion: swarm.cloudflow.io/v1alpha1
 kind: Task
 metadata:
   name: distributed-ml-training
-  namespace: default
+  namespace: claude-flow-swarm
 spec:
   # Reference to the hierarchical swarm
   swarmRef:
@@ -231,7 +231,7 @@ apiVersion: v1
 kind: Service
 metadata:
   name: hierarchical-swarm-metrics
-  namespace: default
+  namespace: claude-flow-swarm
   labels:
     swarm: hierarchical-swarm
 spec:

@@ -62,7 +62,7 @@ apiVersion: swarm.claudeflow.io/v1alpha1
 kind: SwarmTask
 metadata:
   name: terraform-gcp-setup
-  namespace: default
+  namespace: claude-flow-swarm
 spec:
   task: |
     echo "🚀 Setting up GCP infrastructure with Terraform"
@@ -196,7 +196,7 @@ apiVersion: swarm.claudeflow.io/v1alpha1
 kind: SwarmTask
 metadata:
   name: multi-cloud-setup
-  namespace: default
+  namespace: claude-flow-swarm
 spec:
   task: |
     #!/bin/bash
@@ -272,7 +272,7 @@ apiVersion: swarm.claudeflow.io/v1alpha1
 kind: SwarmTask
 metadata:
   name: terraform-full-stack
-  namespace: default
+  namespace: claude-flow-swarm
 spec:
   task: |
     #!/bin/bash
@@ -418,7 +418,7 @@ apiVersion: swarm.claudeflow.io/v1alpha1
 kind: SwarmTask
 metadata:
   name: k8s-multi-cluster-setup
-  namespace: default
+  namespace: claude-flow-swarm
 spec:
   task: |
     #!/bin/bash
@@ -554,7 +554,7 @@ apiVersion: swarm.claudeflow.io/v1alpha1
 kind: SwarmTask
 metadata:
   name: data-pipeline
-  namespace: default
+  namespace: claude-flow-swarm
 spec:
   task: |
     #!/bin/bash
@@ -705,7 +705,7 @@ apiVersion: swarm.claudeflow.io/v1alpha1
 kind: SwarmTask
 metadata:
   name: ml-training-job
-  namespace: default
+  namespace: claude-flow-swarm
 spec:
   task: |
     #!/bin/bash
@@ -838,7 +838,7 @@ apiVersion: swarm.claudeflow.io/v1alpha1
 kind: SwarmTask
 metadata:
   name: gitops-deployment
-  namespace: default
+  namespace: claude-flow-swarm
 spec:
   task: |
     #!/bin/bash
@@ -937,7 +937,7 @@ apiVersion: swarm.claudeflow.io/v1alpha1
 kind: SwarmTask
 metadata:
   name: disaster-recovery
-  namespace: default
+  namespace: claude-flow-swarm
 spec:
   task: |
     #!/bin/bash

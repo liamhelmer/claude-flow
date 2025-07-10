@@ -2,7 +2,7 @@ apiVersion: swarm.claudeflow.io/v1alpha1
 kind: SwarmCluster
 metadata:
   name: example-mesh-swarm
-  namespace: default
+  namespace: claude-flow-swarm
 spec:
   topology: mesh
   maxAgents: 10

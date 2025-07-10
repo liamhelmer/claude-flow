@@ -2,7 +2,7 @@ apiVersion: swarm.claudeflow.io/v1alpha1
 kind: SwarmTask
 metadata:
   name: test-cloud-tools
-  namespace: default
+  namespace: claude-flow-swarm
 spec:
   task: |
     #!/bin/bash

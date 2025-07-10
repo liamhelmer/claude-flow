@@ -2,7 +2,7 @@ apiVersion: swarm.claudeflow.io/v1alpha1
 kind: SwarmTask
 metadata:
   name: github-app-hello-world
-  namespace: default
+  namespace: claude-flow-swarm
 spec:
   swarmRef: github-automation-swarm
   task: "Create a Go hello world application and upload it to a new GitHub repository using GitHub App authentication"

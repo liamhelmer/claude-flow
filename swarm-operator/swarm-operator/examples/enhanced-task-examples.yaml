@@ -4,7 +4,7 @@ apiVersion: swarm.claudeflow.io/v1alpha1
 kind: SwarmTask
 metadata:
   name: terraform-simple
-  namespace: default
+  namespace: claude-flow-swarm
 spec:
   task: |
     echo "🚀 Running Terraform"
@@ -38,7 +38,7 @@ apiVersion: swarm.claudeflow.io/v1alpha1
 kind: SwarmTask
 metadata:
   name: multi-secret-demo
-  namespace: default
+  namespace: claude-flow-swarm
 spec:
   task: |
     echo "🔐 Demonstrating multi-secret access"
@@ -80,7 +80,7 @@ apiVersion: swarm.claudeflow.io/v1alpha1
 kind: SwarmTask
 metadata:
   name: kubectl-operations
-  namespace: default
+  namespace: claude-flow-swarm
 spec:
   task: |
     echo "☸️ Kubernetes operations demo"
@@ -117,7 +117,7 @@ apiVersion: swarm.claudeflow.io/v1alpha1
 kind: SwarmTask
 metadata:
   name: gcloud-alpha-demo
-  namespace: default
+  namespace: claude-flow-swarm
 spec:
   task: |
     echo "☁️ Google Cloud SDK with Alpha components"
@@ -151,7 +151,7 @@ apiVersion: swarm.claudeflow.io/v1alpha1
 kind: SwarmTask
 metadata:
   name: resumable-data-processing
-  namespace: default
+  namespace: claude-flow-swarm
 spec:
   task: |
     echo "📊 Resumable data processing task"
@@ -208,7 +208,7 @@ apiVersion: swarm.claudeflow.io/v1alpha1
 kind: SwarmTask
 metadata:
   name: resource-demo
-  namespace: default
+  namespace: claude-flow-swarm
 spec:
   task: |
     echo "💻 Resource usage demonstration"
@@ -286,7 +286,7 @@ apiVersion: swarm.claudeflow.io/v1alpha1
 kind: SwarmTask
 metadata:
   name: claude-flow-integration
-  namespace: default
+  namespace: claude-flow-swarm
 spec:
   task: |
     echo "🐝 Claude Flow CLI Integration Demo"

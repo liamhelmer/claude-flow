@@ -4,7 +4,7 @@ apiVersion: swarm.claudeflow.io/v1alpha1
 kind: SwarmTask
 metadata:
   name: multi-cloud-infrastructure
-  namespace: default
+  namespace: claude-flow-swarm
 spec:
   task: "Deploy infrastructure across GCP, AWS, and Azure using Terraform"
   swarmRef: production-swarm
@@ -49,7 +49,7 @@ apiVersion: swarm.claudeflow.io/v1alpha1
 kind: SwarmTask
 metadata:
   name: data-processing-pipeline
-  namespace: default
+  namespace: claude-flow-swarm
 spec:
   task: "Process and analyze 10TB dataset with ML models"
   swarmRef: data-processing-swarm
@@ -98,7 +98,7 @@ apiVersion: swarm.claudeflow.io/v1alpha1
 kind: SwarmTask
 metadata:
   name: cicd-pipeline-execution
-  namespace: default
+  namespace: claude-flow-swarm
 spec:
   task: "Execute full CI/CD pipeline for microservices deployment"
   swarmRef: cicd-swarm
@@ -146,7 +146,7 @@ apiVersion: swarm.claudeflow.io/v1alpha1
 kind: SwarmTask
 metadata:
   name: security-compliance-scan
-  namespace: default
+  namespace: claude-flow-swarm
 spec:
   task: "Comprehensive security scan and compliance audit across all cloud resources"
   swarmRef: security-swarm
@@ -192,7 +192,7 @@ apiVersion: swarm.claudeflow.io/v1alpha1
 kind: SwarmTask
 metadata:
   name: database-migration
-  namespace: default
+  namespace: claude-flow-swarm
 spec:
   task: "Migrate production database from PostgreSQL 13 to 15 with zero downtime"
   swarmRef: database-swarm
@@ -251,7 +251,7 @@ apiVersion: swarm.claudeflow.io/v1alpha1
 kind: SwarmTask
 metadata:
   name: ml-model-training
-  namespace: default
+  namespace: claude-flow-swarm
 spec:
   task: "Train and deploy computer vision model on distributed GPU cluster"
   swarmRef: ml-swarm
@@ -308,7 +308,7 @@ apiVersion: swarm.claudeflow.io/v1alpha1
 kind: SwarmTask
 metadata:
   name: disaster-recovery-test
-  namespace: default
+  namespace: claude-flow-swarm
 spec:
   task: "Execute comprehensive disaster recovery drill across all systems"
   swarmRef: dr-swarm

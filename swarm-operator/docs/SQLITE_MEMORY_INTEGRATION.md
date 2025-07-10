@@ -214,8 +214,14 @@ The memory service exposes metrics on port 9091:
 Check SwarmMemoryStore status:
 
 ```bash
-kubectl get swarmmemorystores
-kubectl describe swarmemorystore my-cluster-memory
+# List all SwarmMemoryStores in the namespace
+kubectl get swarmmemorystores -n claude-flow-swarm
+
+# Get detailed status
+kubectl describe swarmemorystore my-cluster-memory -n claude-flow-swarm
+
+# Watch for changes
+kubectl get swarmmemorystores -n claude-flow-swarm -w
 ```
 
 Status includes:
@@ -288,8 +294,8 @@ sqliteConfig:
 ### Common Issues
 
 1. **Memory Pod Not Starting**
-   - Check PVC is bound: `kubectl get pvc`
-   - Check pod logs: `kubectl logs my-cluster-memory-0 -c init-db`
+   - Check PVC is bound: `kubectl get pvc -n claude-flow-swarm`
+   - Check pod logs: `kubectl logs my-cluster-memory-0 -c init-db -n claude-flow-swarm`
 
 2. **High Memory Usage**
    - Review cache settings
@@ -310,16 +316,20 @@ sqliteConfig:
 
 ```bash
 # Check database integrity
-kubectl exec -it my-cluster-memory-0 -- \
+kubectl exec -it my-cluster-memory-0 -n claude-flow-swarm -- \
   sqlite3 /data/memory/swarm-memory.db "PRAGMA integrity_check"
 
 # View table statistics
-kubectl exec -it my-cluster-memory-0 -- \
+kubectl exec -it my-cluster-memory-0 -n claude-flow-swarm -- \
   sqlite3 /data/memory/swarm-memory.db "SELECT COUNT(*) FROM memory_store"
 
 # Force garbage collection
-kubectl exec -it my-cluster-memory-0 -- \
+kubectl exec -it my-cluster-memory-0 -n claude-flow-swarm -- \
   curl -X POST localhost:8080/admin/gc
+
+# Check SwarmMemoryStore status
+kubectl get swarmmemorystores -n claude-flow-swarm
+kubectl describe swarmemorystore my-cluster-memory -n claude-flow-swarm
 ```
 
 ## Best Practices
@@ -351,9 +361,14 @@ kubectl exec -it my-cluster-memory-0 -- \
 ```yaml
 - name: Deploy Swarm with SQLite Memory
   run: |
+    # Create namespaces
+    kubectl create namespace claude-flow-swarm || true
+    kubectl create namespace claude-flow-hivemind || true
+    
+    # Deploy SwarmCluster
     kubectl apply -f swarm-cluster-sqlite.yaml
-    kubectl wait --for=condition=Ready swarmcluster/my-cluster
-    kubectl wait --for=condition=Ready swarmemorystore/my-cluster-memory
+    kubectl wait --for=condition=Ready swarmcluster/my-cluster -n claude-flow-swarm
+    kubectl wait --for=condition=Ready swarmemorystore/my-cluster-memory -n claude-flow-swarm
 ```
 
 ### Testing Memory Operations
@@ -361,7 +376,7 @@ kubectl exec -it my-cluster-memory-0 -- \
 ```yaml
 - name: Test Memory Store
   run: |
-    kubectl exec my-cluster-memory-0 -- \
+    kubectl exec my-cluster-memory-0 -n claude-flow-swarm -- \
       node -e "
         const { SwarmMemory } = require('./memory/swarm-memory.js');
         const memory = new SwarmMemory({ directory: '/data/memory' });

@@ -4,7 +4,7 @@ apiVersion: swarm.cloudflow.io/v1alpha1
 kind: Swarm
 metadata:
   name: autoscaling-swarm
-  namespace: default
+  namespace: claude-flow-swarm
   labels:
     app: example
     feature: autoscaling
@@ -184,7 +184,7 @@ apiVersion: autoscaling/v2
 kind: HorizontalPodAutoscaler
 metadata:
   name: autoscaling-swarm-hpa
-  namespace: default
+  namespace: claude-flow-swarm
 spec:
   scaleTargetRef:
     apiVersion: swarm.cloudflow.io/v1alpha1
@@ -232,7 +232,7 @@ apiVersion: autoscaling.k8s.io/v1
 kind: VerticalPodAutoscaler
 metadata:
   name: autoscaling-swarm-vpa
-  namespace: default
+  namespace: claude-flow-swarm
 spec:
   targetRef:
     apiVersion: swarm.cloudflow.io/v1alpha1
@@ -256,7 +256,7 @@ apiVersion: swarm.cloudflow.io/v1alpha1
 kind: Task
 metadata:
   name: load-test-task
-  namespace: default
+  namespace: claude-flow-swarm
 spec:
   swarmRef:
     name: autoscaling-swarm
@@ -286,7 +286,7 @@ apiVersion: monitoring.coreos.com/v1
 kind: ServiceMonitor
 metadata:
   name: autoscaling-swarm-metrics
-  namespace: default
+  namespace: claude-flow-swarm
   labels:
     swarm: autoscaling-swarm
 spec:

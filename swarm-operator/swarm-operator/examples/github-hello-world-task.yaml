@@ -2,7 +2,7 @@ apiVersion: swarm.claudeflow.io/v1alpha1
 kind: SwarmCluster
 metadata:
   name: github-automation-swarm
-  namespace: default
+  namespace: claude-flow-swarm
 spec:
   topology: hierarchical
   agentCount: 3
@@ -27,7 +27,7 @@ apiVersion: swarm.claudeflow.io/v1alpha1
 kind: SwarmTask
 metadata:
   name: create-hello-world-repo
-  namespace: default
+  namespace: claude-flow-swarm
 spec:
   swarmRef: github-automation-swarm
   task: "Create a Go hello world application and upload it to a new GitHub repository"

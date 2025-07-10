@@ -100,11 +100,21 @@ Default namespace assignment by task type:
 
 #### 1. Store the Private Key
 
+Store the GitHub App private key in the appropriate namespace based on where your SwarmCluster will be deployed:
+
 ```bash
+# For SwarmClusters in claude-flow-swarm namespace
 kubectl create secret generic github-app-key \
   --from-file=private-key=path/to/private-key.pem \
   -n claude-flow-swarm
+
+# For SwarmClusters in claude-flow-hivemind namespace
+kubectl create secret generic github-app-key \
+  --from-file=private-key=path/to/private-key.pem \
+  -n claude-flow-hivemind
 ```
+
+**Note**: The secret should be created in the same namespace as the SwarmCluster that will use it, unless you configure cross-namespace access.
 
 #### 2. Configure SwarmCluster
 
@@ -113,14 +123,27 @@ apiVersion: swarm.claudeflow.io/v1alpha1
 kind: SwarmCluster
 metadata:
   name: github-enabled-cluster
+  namespace: claude-flow-swarm  # Deploy in appropriate namespace
 spec:
   githubApp:
     appID: 123456  # Your GitHub App ID
     privateKeyRef:
       name: github-app-key
       key: private-key
+      # namespace is optional - defaults to SwarmCluster's namespace
     installationID: 789012  # Optional, auto-discovered if not set
     tokenTTL: "1h"         # Token lifetime (default: 1h)
+```
+
+For cross-namespace secret access:
+
+```yaml
+spec:
+  githubApp:
+    privateKeyRef:
+      name: github-app-key
+      key: private-key
+      namespace: swarm-system  # Explicitly reference another namespace
 ```
 
 ### Repository-Scoped Access
@@ -132,6 +155,7 @@ apiVersion: swarm.claudeflow.io/v1alpha1
 kind: SwarmTask
 metadata:
   name: code-analysis-task
+  namespace: claude-flow-swarm  # Same namespace as the SwarmCluster
 spec:
   swarmCluster: github-enabled-cluster
   
@@ -224,6 +248,7 @@ apiVersion: bitnami.com/v1alpha1
 kind: SealedSecret
 metadata:
   name: github-app-key
+  namespace: claude-flow-swarm  # Specify namespace
 spec:
   encryptedData:
     private-key: <encrypted-key>
@@ -379,14 +404,19 @@ spec:
 ### Issue: Namespace Not Found
 
 ```bash
-# Check if namespace exists
+# Check if namespaces exist
 kubectl get namespace claude-flow-swarm
+kubectl get namespace claude-flow-hivemind
 
 # Check operator logs
 kubectl logs -n swarm-system deployment/swarm-operator | grep namespace
 
-# Verify operator is watching namespace
+# Verify operator is watching namespaces
 kubectl get deployment -n swarm-system swarm-operator -o yaml | grep watch-namespaces
+
+# List resources in namespaces
+kubectl get swarmclusters,swarmtasks,swarmagents -n claude-flow-swarm
+kubectl get swarmclusters,swarmtasks,swarmagents -n claude-flow-hivemind
 ```
 
 ### Issue: GitHub Token Not Generated
