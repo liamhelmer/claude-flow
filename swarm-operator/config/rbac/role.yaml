@@ -26,6 +26,12 @@ rules:
 - apiGroups:
   - swarm.claudeflow.io
   resources:
+  - agents/finalizers
+  verbs:
+  - update
+- apiGroups:
+  - swarm.claudeflow.io
+  resources:
   - agents/status
   verbs:
   - get

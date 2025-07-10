@@ -1,0 +1,237 @@
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  name: swarmagents.swarm.claudeflow.io
+spec:
+  group: swarm.claudeflow.io
+  versions:
+  - name: v1alpha1
+    served: true
+    storage: true
+    schema:
+      openAPIV3Schema:
+        type: object
+        properties:
+          spec:
+            type: object
+            required:
+            - type
+            - clusterRef
+            properties:
+              type:
+                type: string
+                enum:
+                - researcher
+                - coder
+                - analyst
+                - optimizer
+                - coordinator
+                - architect
+                - tester
+                - reviewer
+                - documenter
+                - monitor
+                - specialist
+                description: Type of agent specialization
+              clusterRef:
+                type: object
+                required:
+                - name
+                - namespace
+                properties:
+                  name:
+                    type: string
+                    description: Name of the SwarmCluster this agent belongs to
+                  namespace:
+                    type: string
+                    description: Namespace of the SwarmCluster
+              capabilities:
+                type: array
+                items:
+                  type: string
+                description: List of agent capabilities
+              resources:
+                type: object
+                properties:
+                  cpu:
+                    type: string
+                    pattern: ^(\d+m?|\d+\.\d+)$
+                    description: CPU resources for the agent
+                  memory:
+                    type: string
+                    pattern: ^(\d+[EPTGMK]i?|[0-9]+(\.[0-9]+)?[EPTGMK]?i?)$
+                    description: Memory resources for the agent
+                  gpu:
+                    type: string
+                    description: GPU resources if needed
+              priority:
+                type: string
+                enum:
+                - low
+                - medium
+                - high
+                - critical
+                default: medium
+                description: Agent priority level
+              neuralModel:
+                type: object
+                properties:
+                  enabled:
+                    type: boolean
+                    default: false
+                  modelType:
+                    type: string
+                    enum:
+                    - transformer
+                    - lstm
+                    - gnn
+                    - hybrid
+                  checkpoint:
+                    type: string
+                    description: Path to model checkpoint
+                  trainingData:
+                    type: string
+                    description: Reference to training data ConfigMap
+              affinity:
+                type: object
+                x-kubernetes-preserve-unknown-fields: true
+                description: Kubernetes pod affinity rules
+              tolerations:
+                type: array
+                items:
+                  type: object
+                  x-kubernetes-preserve-unknown-fields: true
+                description: Kubernetes pod tolerations
+              nodeSelector:
+                type: object
+                additionalProperties:
+                  type: string
+                description: Node selector for pod placement
+          status:
+            type: object
+            properties:
+              phase:
+                type: string
+                enum:
+                - Pending
+                - Initializing
+                - Running
+                - Training
+                - Coordinating
+                - Terminating
+                - Failed
+                - Completed
+              podName:
+                type: string
+                description: Name of the pod running this agent
+              nodeIP:
+                type: string
+                description: IP of the node running this agent
+              startTime:
+                type: string
+                format: date-time
+              lastActivity:
+                type: string
+                format: date-time
+              tasksCompleted:
+                type: integer
+                default: 0
+              tasksInProgress:
+                type: integer
+                default: 0
+              tasksFailed:
+                type: integer
+                default: 0
+              metrics:
+                type: object
+                properties:
+                  cpuUsage:
+                    type: string
+                  memoryUsage:
+                    type: string
+                  throughput:
+                    type: number
+                    description: Tasks per minute
+                  accuracy:
+                    type: number
+                    minimum: 0
+                    maximum: 1
+                    description: Task completion accuracy
+              neuralStatus:
+                type: object
+                properties:
+                  modelLoaded:
+                    type: boolean
+                  trainingProgress:
+                    type: number
+                    minimum: 0
+                    maximum: 100
+                  lastTrainingTime:
+                    type: string
+                    format: date-time
+                  inferenceLatency:
+                    type: string
+                    description: Average inference latency
+              conditions:
+                type: array
+                items:
+                  type: object
+                  required:
+                  - type
+                  - status
+                  properties:
+                    type:
+                      type: string
+                      enum:
+                      - Ready
+                      - Scheduled
+                      - Healthy
+                      - ResourcesAvailable
+                      - NeuralModelReady
+                    status:
+                      type: string
+                      enum:
+                      - "True"
+                      - "False"
+                      - Unknown
+                    lastTransitionTime:
+                      type: string
+                      format: date-time
+                    reason:
+                      type: string
+                    message:
+                      type: string
+    additionalPrinterColumns:
+    - name: Type
+      type: string
+      jsonPath: .spec.type
+    - name: Phase
+      type: string
+      jsonPath: .status.phase
+    - name: Tasks
+      type: integer
+      jsonPath: .status.tasksCompleted
+    - name: CPU
+      type: string
+      jsonPath: .status.metrics.cpuUsage
+    - name: Memory
+      type: string
+      jsonPath: .status.metrics.memoryUsage
+    - name: Age
+      type: date
+      jsonPath: .metadata.creationTimestamp
+    subresources:
+      status: {}
+      scale:
+        specReplicasPath: .spec.replicas
+        statusReplicasPath: .status.replicas
+  scope: Namespaced
+  names:
+    plural: swarmagents
+    singular: swarmagent
+    kind: SwarmAgent
+    shortNames:
+    - sa
+    categories:
+    - swarm
+    - claude-flow

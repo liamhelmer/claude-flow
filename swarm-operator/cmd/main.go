@@ -19,6 +19,7 @@ package main
 import (
 	"flag"
 	"os"
+	"strings"
 
 	// Import all Kubernetes client auth plugins (e.g. Azure, GCP, OIDC, etc.)
 	// to ensure that exec-entrypoint and run can make use of them.
@@ -28,6 +29,7 @@ import (
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
 	ctrl "sigs.k8s.io/controller-runtime"
+	"sigs.k8s.io/controller-runtime/pkg/cache"
 	"sigs.k8s.io/controller-runtime/pkg/healthz"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 	metricsserver "sigs.k8s.io/controller-runtime/pkg/metrics/server"
@@ -55,6 +57,10 @@ func main() {
 	var probeAddr string
 	var secureMetrics bool
 	var enableHTTP2 bool
+	var watchNamespaces string
+	var swarmNamespace string
+	var hivemindNamespace string
+	
 	flag.StringVar(&metricsAddr, "metrics-bind-address", ":8080", "The address the metric endpoint binds to.")
 	flag.StringVar(&probeAddr, "health-probe-bind-address", ":8081", "The address the probe endpoint binds to.")
 	flag.BoolVar(&enableLeaderElection, "leader-elect", false,
@@ -64,6 +70,13 @@ func main() {
 		"If set the metrics endpoint is served securely")
 	flag.BoolVar(&enableHTTP2, "enable-http2", false,
 		"If set, HTTP/2 will be enabled for the metrics and webhook servers")
+	flag.StringVar(&watchNamespaces, "watch-namespaces", "claude-flow-swarm,claude-flow-hivemind",
+		"Comma-separated list of namespaces to watch. Default: claude-flow-swarm,claude-flow-hivemind")
+	flag.StringVar(&swarmNamespace, "swarm-namespace", "claude-flow-swarm",
+		"Default namespace for swarm agents")
+	flag.StringVar(&hivemindNamespace, "hivemind-namespace", "claude-flow-hivemind",
+		"Default namespace for hive-mind components")
+	
 	opts := zap.Options{
 		Development: true,
 	}
@@ -75,8 +88,25 @@ func main() {
 	// Create metrics recorder
 	metricsRecorder := metrics.NewMetricsRecorder()
 
+	// Parse watch namespaces
+	namespaces := strings.Split(watchNamespaces, ",")
+	for i := range namespaces {
+		namespaces[i] = strings.TrimSpace(namespaces[i])
+	}
+
+	// Configure cache options for multi-namespace watching
+	cacheOptions := cache.Options{
+		DefaultNamespaces: map[string]cache.Config{},
+	}
+	for _, ns := range namespaces {
+		if ns != "" {
+			cacheOptions.DefaultNamespaces[ns] = cache.Config{}
+		}
+	}
+
 	mgr, err := ctrl.NewManager(ctrl.GetConfigOrDie(), ctrl.Options{
 		Scheme: scheme,
+		Cache:  cacheOptions,
 		Metrics: metricsserver.Options{
 			BindAddress:   metricsAddr,
 			SecureServing: secureMetrics,
@@ -104,9 +134,11 @@ func main() {
 
 	// Setup SwarmCluster controller
 	if err = (&controllers.SwarmClusterReconciler{
-		Client:   mgr.GetClient(),
-		Scheme:   mgr.GetScheme(),
-		Recorder: mgr.GetEventRecorderFor("swarmcluster-controller"),
+		Client:            mgr.GetClient(),
+		Scheme:            mgr.GetScheme(),
+		Recorder:          mgr.GetEventRecorderFor("swarmcluster-controller"),
+		SwarmNamespace:    swarmNamespace,
+		HiveMindNamespace: hivemindNamespace,
 	}).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "SwarmCluster")
 		os.Exit(1)
@@ -118,8 +150,21 @@ func main() {
 		Scheme:          mgr.GetScheme(),
 		Recorder:        mgr.GetEventRecorderFor("agent-controller"),
 		MetricsRecorder: metricsRecorder,
+		SwarmNamespace:  swarmNamespace,
 	}).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "Agent")
+		os.Exit(1)
+	}
+	
+	// Setup SwarmTask controller
+	if err = (&controllers.SwarmTaskReconciler{
+		Client:            mgr.GetClient(),
+		Scheme:            mgr.GetScheme(),
+		Recorder:          mgr.GetEventRecorderFor("swarmtask-controller"),
+		SwarmNamespace:    swarmNamespace,
+		HiveMindNamespace: hivemindNamespace,
+	}).SetupWithManager(mgr); err != nil {
+		setupLog.Error(err, "unable to create controller", "controller", "SwarmTask")
 		os.Exit(1)
 	}
 	// +kubebuilder:scaffold:builder
@@ -133,7 +178,11 @@ func main() {
 		os.Exit(1)
 	}
 
-	setupLog.Info("starting manager")
+	setupLog.Info("starting manager",
+		"watchNamespaces", namespaces,
+		"swarmNamespace", swarmNamespace,
+		"hivemindNamespace", hivemindNamespace)
+	
 	if err := mgr.Start(ctrl.SetupSignalHandler()); err != nil {
 		setupLog.Error(err, "problem running manager")
 		os.Exit(1)

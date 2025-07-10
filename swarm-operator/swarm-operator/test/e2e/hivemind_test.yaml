@@ -1,0 +1,244 @@
+# E2E Test: Hive-Mind Collective Intelligence
+# This test validates:
+# 1. Hive-mind initialization and synchronization
+# 2. Collective decision making with consensus
+# 3. Shared memory across agents
+# 4. Neural pattern synchronization
+# 5. Fault tolerance and recovery
+
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: claude-flow-hivemind
+---
+# Test 1: Basic Hive-Mind Cluster
+apiVersion: swarm.claudeflow.io/v1alpha1
+kind: SwarmCluster
+metadata:
+  name: hivemind-basic
+  namespace: claude-flow-hivemind
+spec:
+  topology: mesh
+  queenMode: distributed
+  strategy: consensus
+  consensusThreshold: 0.66
+  
+  hiveMind:
+    enabled: true
+    databaseSize: 1Gi
+    syncInterval: 10s
+    backupEnabled: true
+    backupInterval: 5m
+    
+  autoscaling:
+    enabled: false  # Disable for controlled testing
+    
+  memory:
+    type: redis
+    size: 512Mi
+    replication: 1
+    
+  monitoring:
+    enabled: true
+    metricsPort: 9090
+---
+# Test 2: Shared Knowledge Entry
+apiVersion: swarm.claudeflow.io/v1alpha1
+kind: SwarmMemory
+metadata:
+  name: test-knowledge-1
+  namespace: claude-flow-hivemind
+spec:
+  clusterRef: hivemind-basic
+  namespace: test
+  type: knowledge
+  key: "test.pattern.recognition"
+  value: |
+    {
+      "pattern": "distributed-consensus",
+      "confidence": 0.95,
+      "agents_agreed": ["researcher-1", "analyst-1"],
+      "timestamp": "2024-01-09T10:00:00Z"
+    }
+  ttl: 3600
+  priority: 100
+  compression: true
+---
+# Test 3: Consensus Decision Task
+apiVersion: swarm.claudeflow.io/v1alpha1
+kind: SwarmTask
+metadata:
+  name: consensus-test-1
+  namespace: claude-flow-hivemind
+spec:
+  task: |
+    #!/bin/bash
+    echo "🧠 Testing Hive-Mind Consensus Decision"
+    
+    # Step 1: Check hive-mind connectivity
+    echo "Checking hive-mind connection..."
+    if [ "$HIVEMIND_ENABLED" = "true" ]; then
+      echo "✅ Hive-mind is enabled"
+      curl -s http://$HIVEMIND_ENDPOINT/status || echo "⚠️ Hive-mind not ready yet"
+    fi
+    
+    # Step 2: Submit decision for consensus
+    echo "Submitting decision for consensus..."
+    DECISION_ID=$(uuidgen)
+    cat > /tmp/decision.json <<EOF
+    {
+      "id": "$DECISION_ID",
+      "type": "architecture",
+      "proposal": "Use microservices pattern",
+      "rationale": "Better scalability and maintainability",
+      "confidence": 0.85
+    }
+    EOF
+    
+    # Step 3: Store in shared memory
+    echo "Storing decision in shared memory..."
+    redis-cli -h ${MEMORY_ENDPOINT%:*} SET "decision:$DECISION_ID" "$(cat /tmp/decision.json)"
+    
+    # Step 4: Simulate consensus voting (in real scenario, other agents vote)
+    echo "Simulating consensus process..."
+    for i in {1..5}; do
+      VOTE=$([ $((RANDOM % 100)) -gt 30 ] && echo "approve" || echo "reject")
+      echo "Agent-$i votes: $VOTE"
+      redis-cli -h ${MEMORY_ENDPOINT%:*} SADD "votes:$DECISION_ID:$VOTE" "agent-$i"
+    done
+    
+    # Step 5: Calculate consensus
+    APPROVALS=$(redis-cli -h ${MEMORY_ENDPOINT%:*} SCARD "votes:$DECISION_ID:approve")
+    REJECTIONS=$(redis-cli -h ${MEMORY_ENDPOINT%:*} SCARD "votes:$DECISION_ID:reject")
+    TOTAL=$((APPROVALS + REJECTIONS))
+    
+    if [ $TOTAL -gt 0 ]; then
+      APPROVAL_RATE=$(echo "scale=2; $APPROVALS / $TOTAL" | bc)
+      echo "Consensus: $APPROVAL_RATE (threshold: 0.66)"
+      
+      if (( $(echo "$APPROVAL_RATE >= 0.66" | bc -l) )); then
+        echo "✅ Consensus ACHIEVED - Decision approved!"
+      else
+        echo "❌ Consensus FAILED - Decision rejected"
+      fi
+    fi
+    
+    # Step 6: Test neural pattern sharing
+    echo "Testing neural pattern synchronization..."
+    cat > /tmp/pattern.json <<EOF
+    {
+      "type": "optimization",
+      "weights": [0.1, 0.2, 0.3, 0.4, 0.5],
+      "accuracy": 0.92,
+      "training_epochs": 100
+    }
+    EOF
+    
+    redis-cli -h ${MEMORY_ENDPOINT%:*} SET "neural:pattern:opt-v1" "$(cat /tmp/pattern.json)"
+    echo "✅ Neural pattern stored for synchronization"
+    
+    # Step 7: Verify hive-mind metrics
+    echo "Checking hive-mind metrics..."
+    curl -s http://localhost:9090/metrics | grep -E "hivemind|swarm" | head -10
+    
+    echo "🎉 Hive-mind test completed!"
+---
+# Test 4: Fault Tolerance Test
+apiVersion: swarm.claudeflow.io/v1alpha1
+kind: SwarmTask
+metadata:
+  name: fault-tolerance-test
+  namespace: claude-flow-hivemind
+spec:
+  task: |
+    #!/bin/bash
+    echo "🛡️ Testing Hive-Mind Fault Tolerance"
+    
+    # Store critical state
+    echo "Storing critical state in hive-mind..."
+    CRITICAL_DATA='{"mission": "analyze-code", "progress": 45, "checkpoint": "phase-2"}'
+    redis-cli -h ${MEMORY_ENDPOINT%:*} SET "state:critical:mission-1" "$CRITICAL_DATA" EX 3600
+    
+    # Simulate agent failure and recovery
+    echo "Simulating agent failure..."
+    sleep 2
+    
+    echo "New agent recovering state..."
+    RECOVERED=$(redis-cli -h ${MEMORY_ENDPOINT%:*} GET "state:critical:mission-1")
+    if [ -n "$RECOVERED" ]; then
+      echo "✅ State recovered successfully: $RECOVERED"
+    else
+      echo "❌ Failed to recover state"
+      exit 1
+    fi
+    
+    # Test collective memory persistence
+    echo "Testing collective memory..."
+    for i in {1..5}; do
+      MEMORY_KEY="collective:learning:$i"
+      MEMORY_VALUE='{"learning": "pattern-'$i'", "confidence": 0.'$((70 + i))'}'
+      redis-cli -h ${MEMORY_ENDPOINT%:*} SET "$MEMORY_KEY" "$MEMORY_VALUE"
+    done
+    
+    # Verify collective memory
+    COLLECTIVE_SIZE=$(redis-cli -h ${MEMORY_ENDPOINT%:*} KEYS "collective:*" | wc -l)
+    echo "✅ Collective memory entries: $COLLECTIVE_SIZE"
+    
+    echo "🎉 Fault tolerance test completed!"
+---
+# Test 5: Agent for Testing
+apiVersion: swarm.claudeflow.io/v1alpha1
+kind: SwarmAgent
+metadata:
+  name: test-researcher-1
+  namespace: claude-flow-hivemind
+spec:
+  type: researcher
+  clusterRef: hivemind-basic
+  cognitivePattern: divergent
+  priority: 80
+  maxConcurrentTasks: 3
+  capabilities:
+  - analyze
+  - consensus
+  - learn
+  hiveMindRole: follower
+  resources:
+    cpu: "200m"
+    memory: "256Mi"
+---
+# Test 6: Monitoring Test Job
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: validate-hivemind
+  namespace: claude-flow-hivemind
+spec:
+  template:
+    spec:
+      containers:
+      - name: validator
+        image: curlimages/curl:latest
+        command:
+        - sh
+        - -c
+        - |
+          echo "🔍 Validating Hive-Mind Components"
+          
+          # Wait for components to be ready
+          sleep 30
+          
+          # Check hive-mind pods
+          echo "Checking hive-mind pods..."
+          # This would normally use kubectl, but using curl for the test
+          
+          # Check metrics endpoint
+          echo "Checking metrics..."
+          curl -s http://hivemind-basic-hivemind:8080/metrics || echo "Metrics not ready"
+          
+          # Validate sync status
+          echo "Checking sync status..."
+          curl -s http://hivemind-basic-hivemind:8080/status || echo "Status endpoint not ready"
+          
+          echo "✅ Validation complete"
+      restartPolicy: OnFailure

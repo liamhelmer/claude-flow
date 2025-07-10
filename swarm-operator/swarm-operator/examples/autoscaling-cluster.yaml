@@ -1,0 +1,404 @@
+apiVersion: swarm.claude-flow.ai/v1alpha1
+kind: SwarmCluster
+metadata:
+  name: autoscaling-demo
+  namespace: claude-flow
+spec:
+  topology: hierarchical
+  maxAgents: 100  # Maximum agents for autoscaling
+  strategy: balanced
+  
+  # Advanced autoscaling configuration
+  autoscaling:
+    enabled: true
+    minAgents: 5
+    maxAgents: 100
+    metrics:
+      # CPU-based scaling
+      - type: Resource
+        resource:
+          name: cpu
+          target:
+            type: Utilization
+            averageUtilization: 70
+      # Memory-based scaling
+      - type: Resource
+        resource:
+          name: memory
+          target:
+            type: Utilization
+            averageUtilization: 80
+      # Custom metrics
+      - type: Pods
+        pods:
+          metric:
+            name: task_queue_length
+          target:
+            type: AverageValue
+            averageValue: "10"
+      - type: External
+        external:
+          metric:
+            name: neural_inference_latency
+            selector:
+              matchLabels:
+                cluster: autoscaling-demo
+          target:
+            type: Value
+            value: "100m"  # 100ms target latency
+    
+    # Scaling policies
+    behavior:
+      scaleUp:
+        policies:
+        - type: Percent
+          value: 100  # Double the agents
+          periodSeconds: 60
+        - type: Pods
+          value: 10   # Add 10 agents at a time
+          periodSeconds: 60
+        selectPolicy: Max  # Use the policy that scales most
+        stabilizationWindowSeconds: 30
+      scaleDown:
+        policies:
+        - type: Percent
+          value: 10   # Remove 10% of agents
+          periodSeconds: 300
+        - type: Pods
+          value: 5    # Remove 5 agents at a time
+          periodSeconds: 300
+        selectPolicy: Min  # Use the policy that scales least
+        stabilizationWindowSeconds: 300
+    
+    # Agent type specific scaling
+    agentPolicies:
+      - agentType: coder
+        priority: high
+        minReplicas: 2
+        maxReplicas: 40
+        targetUtilization: 75
+      - agentType: researcher
+        priority: medium
+        minReplicas: 1
+        maxReplicas: 20
+        targetUtilization: 80
+      - agentType: analyst
+        priority: medium
+        minReplicas: 1
+        maxReplicas: 15
+        targetUtilization: 85
+      - agentType: coordinator
+        priority: critical
+        minReplicas: 2
+        maxReplicas: 5
+        targetUtilization: 60
+  
+  # Predictive scaling using neural models
+  predictiveScaling:
+    enabled: true
+    model: time-series-predictor
+    lookAheadMinutes: 30
+    scaleUpThreshold: 0.8
+    scaleDownThreshold: 0.3
+    dataRetentionDays: 30
+  
+  # Agent configuration with autoscaling hints
+  agents:
+    - type: coordinator
+      replicas: 2  # Initial replicas
+      capabilities:
+        - task-orchestration
+        - load-balancing
+        - scaling-decisions
+      resources:
+        cpu: "2"
+        memory: "4Gi"
+      autoscaling:
+        enabled: true
+        minReplicas: 2
+        maxReplicas: 5
+        metrics:
+          - type: cpu
+            threshold: 60
+          - type: custom
+            name: coordination_queue
+            threshold: 20
+    
+    - type: coder
+      replicas: 5  # Initial replicas
+      capabilities:
+        - code-generation
+        - refactoring
+        - testing
+      resources:
+        cpu: "1.5"
+        memory: "3Gi"
+      autoscaling:
+        enabled: true
+        minReplicas: 2
+        maxReplicas: 40
+        metrics:
+          - type: cpu
+            threshold: 75
+          - type: memory
+            threshold: 80
+          - type: custom
+            name: code_generation_queue
+            threshold: 5
+    
+    - type: researcher
+      replicas: 3  # Initial replicas
+      capabilities:
+        - information-gathering
+        - analysis
+        - summarization
+      resources:
+        cpu: "1"
+        memory: "2Gi"
+      autoscaling:
+        enabled: true
+        minReplicas: 1
+        maxReplicas: 20
+        metrics:
+          - type: cpu
+            threshold: 80
+          - type: custom
+            name: research_tasks_pending
+            threshold: 10
+    
+    - type: analyst
+      replicas: 2  # Initial replicas
+      capabilities:
+        - performance-analysis
+        - metrics-collection
+        - reporting
+      resources:
+        cpu: "1"
+        memory: "2Gi"
+      autoscaling:
+        enabled: true
+        minReplicas: 1
+        maxReplicas: 15
+        burstCapacity: 5  # Can burst up to 5 extra agents
+    
+    - type: optimizer
+      replicas: 2  # Initial replicas
+      capabilities:
+        - performance-tuning
+        - resource-optimization
+        - cost-analysis
+      resources:
+        cpu: "0.5"
+        memory: "1Gi"
+      autoscaling:
+        enabled: true
+        minReplicas: 1
+        maxReplicas: 10
+        cooldownPeriod: 300  # 5 minutes between scaling events
+  
+  # Monitoring for autoscaling decisions
+  monitoring:
+    enabled: true
+    prometheusEndpoint: http://prometheus:9090
+    grafanaDashboard: true
+    customMetrics:
+      - name: task_queue_length
+        type: gauge
+        help: Number of tasks waiting in queue
+      - name: code_generation_queue
+        type: gauge
+        help: Code generation tasks pending
+      - name: research_tasks_pending
+        type: gauge
+        help: Research tasks awaiting processing
+      - name: coordination_queue
+        type: gauge
+        help: Coordination decisions pending
+      - name: agent_utilization
+        type: histogram
+        help: Agent resource utilization
+      - name: scaling_decisions
+        type: counter
+        help: Number of scaling decisions made
+    alerts:
+      - name: ScalingLimitReached
+        expr: swarm_current_agents >= swarm_max_agents * 0.9
+        severity: warning
+      - name: RapidScaling
+        expr: rate(swarm_scaling_decisions[5m]) > 10
+        severity: warning
+      - name: UnderUtilization
+        expr: avg(swarm_agent_utilization) < 0.3
+        severity: info
+  
+  # Cost optimization settings
+  costOptimization:
+    enabled: true
+    targetMonthlyCost: 1000  # USD
+    spotInstances:
+      enabled: true
+      percentage: 70  # Use spot for 70% of agents
+      fallbackToOnDemand: true
+    rightsizing:
+      enabled: true
+      checkInterval: 1h
+      downscaleThreshold: 0.3  # Downsize if under 30% for 1 hour
+  
+  # Storage configuration
+  storage:
+    sharedMemory:
+      class: fast-ssd
+      size: 20Gi
+      accessMode: ReadWriteMany
+      autoExpand:
+        enabled: true
+        increment: 10Gi
+        maxSize: 100Gi
+    modelCache:
+      class: standard
+      size: 50Gi
+      accessMode: ReadOnlyMany
+  
+  # Scheduling preferences
+  scheduling:
+    preemptionPolicy: PreemptLowerPriority
+    priorityClassName: swarm-autoscaling
+    podDisruptionBudget:
+      minAvailable: 2  # Always keep at least 2 agents per type
+    nodeAffinity:
+      preferredDuringSchedulingIgnoredDuringExecution:
+      - weight: 100
+        preference:
+          matchExpressions:
+          - key: node.kubernetes.io/instance-type
+            operator: In
+            values:
+            - m5.xlarge
+            - m5.2xlarge
+            - m5.4xlarge
+
+---
+# HorizontalPodAutoscaler for fine-grained control
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: swarm-agent-coder-hpa
+  namespace: claude-flow
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: swarm-agent-coder
+  minReplicas: 2
+  maxReplicas: 40
+  metrics:
+  - type: Resource
+    resource:
+      name: cpu
+      target:
+        type: Utilization
+        averageUtilization: 75
+  - type: Resource
+    resource:
+      name: memory
+      target:
+        type: Utilization
+        averageUtilization: 80
+  - type: Pods
+    pods:
+      metric:
+        name: code_generation_queue
+      target:
+        type: AverageValue
+        averageValue: "5"
+  behavior:
+    scaleUp:
+      stabilizationWindowSeconds: 30
+      policies:
+      - type: Percent
+        value: 100
+        periodSeconds: 60
+      - type: Pods
+        value: 10
+        periodSeconds: 60
+      selectPolicy: Max
+    scaleDown:
+      stabilizationWindowSeconds: 300
+      policies:
+      - type: Percent
+        value: 10
+        periodSeconds: 300
+      - type: Pods
+        value: 2
+        periodSeconds: 300
+      selectPolicy: Min
+
+---
+# PodDisruptionBudget for high availability
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: swarm-coordinator-pdb
+  namespace: claude-flow
+spec:
+  minAvailable: 2
+  selector:
+    matchLabels:
+      swarm.claude-flow.ai/agent-type: coordinator
+      swarm.claude-flow.ai/cluster: autoscaling-demo
+
+---
+# Example SwarmMemory for autoscaling metrics
+apiVersion: swarm.claude-flow.ai/v1alpha1
+kind: SwarmMemory
+metadata:
+  name: autoscaling-metrics-history
+  namespace: claude-flow
+spec:
+  key: autoscaling.metrics.history
+  namespace: metrics
+  value:
+    scalingEvents:
+      - timestamp: "2024-01-15T10:00:00Z"
+        agentType: "coder"
+        from: 5
+        to: 15
+        reason: "High CPU utilization (85%)"
+        duration: "45s"
+      - timestamp: "2024-01-15T11:30:00Z"
+        agentType: "researcher"
+        from: 3
+        to: 8
+        reason: "Research queue length > 10"
+        duration: "30s"
+    predictions:
+      - timestamp: "2024-01-15T12:00:00Z"
+        agentType: "coder"
+        predictedLoad: 0.85
+        recommendedAgents: 20
+        confidence: 0.92
+    costAnalysis:
+      daily:
+        onDemand: 145.20
+        spot: 43.56
+        total: 188.76
+      optimization:
+        potentialSavings: 32.45
+        recommendations:
+          - "Increase spot instance percentage to 80%"
+          - "Downsize coordinator agents during off-peak"
+  ttl: "2160h"  # 90 days
+  importance: high
+  tags:
+    - autoscaling
+    - metrics
+    - cost-optimization
+  compression:
+    enabled: true
+    algorithm: zstd
+  indexing:
+    enabled: true
+    fields:
+      - scalingEvents.agentType
+      - scalingEvents.timestamp
+      - predictions.agentType

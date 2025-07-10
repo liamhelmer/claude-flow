@@ -1,0 +1,257 @@
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  name: swarmmemories.swarm.claudeflow.io
+spec:
+  group: swarm.claudeflow.io
+  versions:
+  - name: v1alpha1
+    served: true
+    storage: true
+    schema:
+      openAPIV3Schema:
+        type: object
+        properties:
+          spec:
+            type: object
+            required:
+            - key
+            - value
+            properties:
+              key:
+                type: string
+                minLength: 1
+                maxLength: 253
+                pattern: ^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$
+                description: Unique key for the memory entry
+              namespace:
+                type: string
+                default: default
+                description: Memory namespace for organization
+              value:
+                type: object
+                x-kubernetes-preserve-unknown-fields: true
+                description: Memory content (any valid JSON)
+              ttl:
+                type: string
+                pattern: ^(\d+h)?(\d+m)?(\d+s)?$
+                description: Time to live (e.g., 24h, 30m, 45s)
+              importance:
+                type: string
+                enum:
+                - low
+                - medium
+                - high
+                - critical
+                default: medium
+                description: Memory importance level
+              tags:
+                type: array
+                items:
+                  type: string
+                description: Tags for memory categorization
+              sharedWith:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    agentType:
+                      type: string
+                      description: Type of agents that can access this memory
+                    clusterRef:
+                      type: object
+                      properties:
+                        name:
+                          type: string
+                        namespace:
+                          type: string
+                description: Agents or clusters that can access this memory
+              encryption:
+                type: object
+                properties:
+                  enabled:
+                    type: boolean
+                    default: false
+                  keyRef:
+                    type: object
+                    properties:
+                      name:
+                        type: string
+                      key:
+                        type: string
+                    description: Reference to encryption key in Secret
+              compression:
+                type: object
+                properties:
+                  enabled:
+                    type: boolean
+                    default: false
+                  algorithm:
+                    type: string
+                    enum:
+                    - gzip
+                    - zstd
+                    - lz4
+                    default: gzip
+              replication:
+                type: object
+                properties:
+                  enabled:
+                    type: boolean
+                    default: true
+                  replicas:
+                    type: integer
+                    minimum: 1
+                    maximum: 5
+                    default: 3
+                  strategy:
+                    type: string
+                    enum:
+                    - sync
+                    - async
+                    default: async
+              indexing:
+                type: object
+                properties:
+                  enabled:
+                    type: boolean
+                    default: true
+                  fields:
+                    type: array
+                    items:
+                      type: string
+                    description: Fields to index for fast search
+                  vectorization:
+                    type: boolean
+                    default: false
+                    description: Enable vector indexing for semantic search
+          status:
+            type: object
+            properties:
+              phase:
+                type: string
+                enum:
+                - Pending
+                - Active
+                - Expiring
+                - Expired
+                - Archived
+                - Failed
+              size:
+                type: string
+                description: Size of the memory entry
+              compressed:
+                type: boolean
+                default: false
+              encrypted:
+                type: boolean
+                default: false
+              replicas:
+                type: integer
+                description: Number of active replicas
+              lastAccessed:
+                type: string
+                format: date-time
+              accessCount:
+                type: integer
+                default: 0
+              createdAt:
+                type: string
+                format: date-time
+              expiresAt:
+                type: string
+                format: date-time
+              checksum:
+                type: string
+                description: SHA256 checksum of the value
+              locations:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    node:
+                      type: string
+                    pod:
+                      type: string
+                    ready:
+                      type: boolean
+                description: Where memory replicas are stored
+              indexes:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    field:
+                      type: string
+                    type:
+                      type: string
+                      enum:
+                      - text
+                      - numeric
+                      - vector
+                    ready:
+                      type: boolean
+                description: Active indexes on this memory
+              conditions:
+                type: array
+                items:
+                  type: object
+                  required:
+                  - type
+                  - status
+                  properties:
+                    type:
+                      type: string
+                      enum:
+                      - Available
+                      - Replicated
+                      - Indexed
+                      - Encrypted
+                      - Compressed
+                    status:
+                      type: string
+                      enum:
+                      - "True"
+                      - "False"
+                      - Unknown
+                    lastTransitionTime:
+                      type: string
+                      format: date-time
+                    reason:
+                      type: string
+                    message:
+                      type: string
+    additionalPrinterColumns:
+    - name: Key
+      type: string
+      jsonPath: .spec.key
+    - name: Namespace
+      type: string
+      jsonPath: .spec.namespace
+    - name: Size
+      type: string
+      jsonPath: .status.size
+    - name: Phase
+      type: string
+      jsonPath: .status.phase
+    - name: Replicas
+      type: integer
+      jsonPath: .status.replicas
+    - name: Accessed
+      type: integer
+      jsonPath: .status.accessCount
+    - name: Age
+      type: date
+      jsonPath: .metadata.creationTimestamp
+    subresources:
+      status: {}
+  scope: Namespaced
+  names:
+    plural: swarmmemories
+    singular: swarmmemory
+    kind: SwarmMemory
+    shortNames:
+    - sm
+    categories:
+    - swarm
+    - claude-flow

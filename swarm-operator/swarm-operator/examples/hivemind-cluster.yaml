@@ -1,0 +1,268 @@
+apiVersion: swarm.claude-flow.ai/v1alpha1
+kind: SwarmCluster
+metadata:
+  name: hivemind-demo
+  namespace: claude-flow
+spec:
+  topology: mesh
+  maxAgents: 20
+  strategy: adaptive
+  
+  # Hive-mind configuration for collective intelligence
+  hiveMind:
+    enabled: true
+    consensusAlgorithm: raft
+    syncInterval: 5s
+    sharedMemorySize: 10Gi
+    neuralSync:
+      enabled: true
+      modelSharing: true
+      parameterAveraging: true
+      updateFrequency: 30s
+    decisionMaking:
+      votingThreshold: 0.7
+      timeoutSeconds: 10
+      requireQuorum: true
+      minimumVoters: 5
+  
+  # Neural models for advanced AI capabilities
+  neuralModels:
+    - name: task-predictor
+      type: transformer
+      size: medium
+      checkpoint: s3://models/swarm/task-predictor-v2
+      updateStrategy: continuous
+    - name: resource-optimizer
+      type: gnn
+      size: small
+      checkpoint: s3://models/swarm/resource-optimizer-v1
+      updateStrategy: periodic
+    - name: pattern-recognizer
+      type: lstm
+      size: large
+      checkpoint: s3://models/swarm/pattern-recognizer-v3
+      updateStrategy: on-demand
+  
+  # Agent configuration
+  agents:
+    - type: coordinator
+      replicas: 2
+      capabilities:
+        - task-orchestration
+        - consensus-building
+        - resource-allocation
+      resources:
+        cpu: "2"
+        memory: "4Gi"
+      neuralModel:
+        enabled: true
+        modelType: transformer
+    
+    - type: researcher
+      replicas: 4
+      capabilities:
+        - web-search
+        - data-analysis
+        - pattern-recognition
+      resources:
+        cpu: "1"
+        memory: "2Gi"
+      neuralModel:
+        enabled: true
+        modelType: lstm
+    
+    - type: coder
+      replicas: 6
+      capabilities:
+        - code-generation
+        - testing
+        - optimization
+      resources:
+        cpu: "2"
+        memory: "4Gi"
+      neuralModel:
+        enabled: true
+        modelType: transformer
+    
+    - type: analyst
+      replicas: 4
+      capabilities:
+        - performance-analysis
+        - bottleneck-detection
+        - trend-prediction
+      resources:
+        cpu: "1.5"
+        memory: "3Gi"
+      neuralModel:
+        enabled: true
+        modelType: gnn
+    
+    - type: optimizer
+      replicas: 4
+      capabilities:
+        - resource-optimization
+        - cost-reduction
+        - efficiency-improvement
+      resources:
+        cpu: "1"
+        memory: "2Gi"
+  
+  # Monitoring configuration
+  monitoring:
+    enabled: true
+    prometheusEndpoint: http://prometheus:9090
+    grafanaDashboard: true
+    customMetrics:
+      - name: task_consensus_time
+        type: histogram
+        help: Time to reach consensus on task decisions
+      - name: neural_sync_latency
+        type: gauge
+        help: Latency of neural model synchronization
+      - name: collective_intelligence_score
+        type: gauge
+        help: Overall hive-mind intelligence metric
+    alerts:
+      - name: ConsensusFailure
+        expr: rate(swarm_consensus_failures[5m]) > 0.1
+        severity: critical
+      - name: NeuralSyncLag
+        expr: swarm_neural_sync_lag_seconds > 60
+        severity: warning
+  
+  # Storage for shared memory and models
+  storage:
+    sharedMemory:
+      class: fast-ssd
+      size: 50Gi
+      accessMode: ReadWriteMany
+    modelCache:
+      class: standard
+      size: 100Gi
+      accessMode: ReadOnlyMany
+    checkpoints:
+      class: standard
+      size: 200Gi
+      accessMode: ReadWriteMany
+  
+  # Network policies for secure communication
+  networkPolicies:
+    enabled: true
+    allowedNamespaces:
+      - claude-flow
+      - monitoring
+    encryption:
+      enabled: true
+      protocol: TLS
+      certSecret: swarm-tls-cert
+  
+  # Resource quotas
+  resourceQuotas:
+    requests:
+      cpu: "30"
+      memory: "60Gi"
+      storage: "350Gi"
+    limits:
+      cpu: "50"
+      memory: "100Gi"
+      storage: "500Gi"
+
+---
+# Example SwarmMemory for hive-mind shared knowledge
+apiVersion: swarm.claude-flow.ai/v1alpha1
+kind: SwarmMemory
+metadata:
+  name: hivemind-knowledge-base
+  namespace: claude-flow
+spec:
+  key: hivemind.shared.knowledge
+  namespace: global
+  value:
+    patterns:
+      - name: "API Design"
+        description: "Best practices for REST API design"
+        examples:
+          - "Use proper HTTP verbs"
+          - "Version your APIs"
+          - "Implement pagination"
+      - name: "Error Handling"
+        description: "Consistent error handling patterns"
+        examples:
+          - "Use standard HTTP status codes"
+          - "Provide meaningful error messages"
+          - "Include error codes for debugging"
+    decisions:
+      - timestamp: "2024-01-15T10:00:00Z"
+        topic: "Database Selection"
+        consensus: "PostgreSQL for relational data, Redis for caching"
+        voters: 12
+        confidence: 0.92
+    learnings:
+      - context: "Performance Optimization"
+        insight: "Batch operations reduce latency by 73%"
+        applications: ["API endpoints", "Database queries", "Cache updates"]
+  ttl: "720h"  # 30 days
+  importance: critical
+  tags:
+    - hivemind
+    - shared-knowledge
+    - best-practices
+  sharedWith:
+    - agentType: coordinator
+    - agentType: architect
+    - agentType: coder
+  replication:
+    enabled: true
+    replicas: 5
+    strategy: sync
+  indexing:
+    enabled: true
+    fields:
+      - patterns.name
+      - decisions.topic
+      - learnings.context
+    vectorization: true
+
+---
+# Example SwarmAgent with neural capabilities
+apiVersion: swarm.claude-flow.ai/v1alpha1
+kind: SwarmAgent
+metadata:
+  name: lead-coordinator
+  namespace: claude-flow
+spec:
+  type: coordinator
+  clusterRef:
+    name: hivemind-demo
+    namespace: claude-flow
+  capabilities:
+    - consensus-building
+    - task-distribution
+    - conflict-resolution
+    - strategic-planning
+    - neural-coordination
+  resources:
+    cpu: "4"
+    memory: "8Gi"
+    gpu: "1"  # For neural model inference
+  priority: critical
+  neuralModel:
+    enabled: true
+    modelType: transformer
+    checkpoint: s3://models/swarm/coordinator-enhanced-v3
+    trainingData: coordinator-training-data
+  affinity:
+    podAntiAffinity:
+      preferredDuringSchedulingIgnoredDuringExecution:
+      - weight: 100
+        podAffinityTerm:
+          labelSelector:
+            matchExpressions:
+            - key: swarm.claude-flow.ai/agent-type
+              operator: In
+              values:
+              - coordinator
+          topologyKey: kubernetes.io/hostname
+  nodeSelector:
+    node-role.kubernetes.io/swarm: "true"
+    hardware.kubernetes.io/gpu: "nvidia"

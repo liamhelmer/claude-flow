@@ -1,0 +1,236 @@
+# E2E Test: GitHub Token Generation and Repository Access
+# This test validates:
+# 1. GitHub App token generation per agent
+# 2. Repository-scoped access restrictions
+# 3. Token rotation and lifecycle management
+# 4. Integration with SwarmTask execution
+
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: claude-flow-swarm
+---
+# GitHub App private key secret (test key - DO NOT USE IN PRODUCTION)
+apiVersion: v1
+kind: Secret
+metadata:
+  name: github-app-key
+  namespace: claude-flow-swarm
+type: Opaque
+stringData:
+  private-key: |
+    -----BEGIN RSA PRIVATE KEY-----
+    # This would be your actual GitHub App private key
+    # For testing, we'll use a dummy key
+    MIIEowIBAAKCAQEA0Z3VS5JJcds3xSn/KhCiPWs1OHsrFMDqJlpGsGSbvs9lLrKR
+    test-key-content-here
+    -----END RSA PRIVATE KEY-----
+---
+# Test 1: SwarmCluster with GitHub App configuration
+apiVersion: swarm.claudeflow.io/v1alpha1
+kind: SwarmCluster
+metadata:
+  name: github-enabled-cluster
+  namespace: claude-flow-swarm
+spec:
+  topology: mesh
+  
+  # GitHub App configuration
+  githubApp:
+    appID: 123456  # Your GitHub App ID
+    privateKeyRef:
+      name: github-app-key
+      key: private-key
+    tokenTTL: "1h"
+    
+  # Use specific namespaces
+  namespaceConfig:
+    swarmNamespace: claude-flow-swarm
+    hiveMindNamespace: claude-flow-hivemind
+    createNamespaces: true
+    
+  agentTemplate:
+    resources:
+      cpu: "100m"
+      memory: "128Mi"
+---
+# Test 2: SwarmTask with repository restrictions
+apiVersion: swarm.claudeflow.io/v1alpha1
+kind: SwarmTask
+metadata:
+  name: test-github-access
+  namespace: claude-flow-swarm
+spec:
+  swarmCluster: github-enabled-cluster
+  type: development
+  description: "Test GitHub repository access with scoped tokens"
+  
+  # Repositories this task needs access to
+  repositories:
+  - "claude-flow/swarm-operator"
+  - "claude-flow/test-repo"
+  
+  # Task parameters
+  parameters:
+    action: "clone-and-analyze"
+    branch: "main"
+    
+  subtasks:
+  - name: clone-repos
+    type: git
+    description: "Clone allowed repositories"
+    parameters:
+      command: |
+        #!/bin/bash
+        echo "Testing GitHub access with scoped token"
+        
+        # Token should be available in GITHUB_TOKEN env var
+        if [ -z "$GITHUB_TOKEN" ]; then
+          echo "ERROR: No GitHub token found"
+          exit 1
+        fi
+        
+        # Test cloning allowed repositories
+        for repo in $GITHUB_REPOSITORIES; do
+          echo "Cloning $repo..."
+          git clone https://x-access-token:${GITHUB_TOKEN}@github.com/${repo}.git
+          if [ $? -eq 0 ]; then
+            echo "✅ Successfully cloned $repo"
+          else
+            echo "❌ Failed to clone $repo"
+          fi
+        done
+        
+        # Test access to non-allowed repository (should fail)
+        echo "Testing access to non-allowed repository..."
+        git clone https://x-access-token:${GITHUB_TOKEN}@github.com/other-org/other-repo.git
+        if [ $? -ne 0 ]; then
+          echo "✅ Correctly denied access to non-allowed repository"
+        else
+          echo "❌ ERROR: Should not have access to non-allowed repository"
+          exit 1
+        fi
+---
+# Test 3: SwarmAgent with custom repository access
+apiVersion: swarm.claudeflow.io/v1alpha1
+kind: SwarmAgent
+metadata:
+  name: custom-github-agent
+  namespace: claude-flow-swarm
+spec:
+  type: coder
+  clusterRef: github-enabled-cluster
+  
+  # Agent-specific repository access
+  allowedRepositories:
+  - "claude-flow/agent-specific-repo"
+  
+  capabilities:
+  - git
+  - code-analysis
+  - pull-request
+  
+  resources:
+    cpu: "200m"
+    memory: "256Mi"
+---
+# Test 4: Token rotation test
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: test-token-rotation
+  namespace: claude-flow-swarm
+spec:
+  template:
+    spec:
+      serviceAccountName: swarm-operator
+      restartPolicy: OnFailure
+      containers:
+      - name: test
+        image: bitnami/kubectl:latest
+        command:
+        - sh
+        - -c
+        - |
+          echo "Testing GitHub token rotation..."
+          
+          # Get the agent
+          kubectl get swarmagent custom-github-agent -n claude-flow-swarm -o yaml
+          
+          # Check if token secret exists
+          TOKEN_SECRET=$(kubectl get swarmagent custom-github-agent -n claude-flow-swarm -o jsonpath='{.spec.githubTokenSecret}')
+          if [ -n "$TOKEN_SECRET" ]; then
+            echo "Token secret: $TOKEN_SECRET"
+            
+            # Check token expiration
+            EXPIRES_AT=$(kubectl get secret $TOKEN_SECRET -n claude-flow-swarm -o jsonpath='{.metadata.annotations.swarm\.claudeflow\.io/expires-at}')
+            echo "Token expires at: $EXPIRES_AT"
+            
+            # Check allowed repositories
+            REPOS=$(kubectl get secret $TOKEN_SECRET -n claude-flow-swarm -o jsonpath='{.metadata.annotations.swarm\.claudeflow\.io/repositories}')
+            echo "Allowed repositories: $REPOS"
+          else
+            echo "No token secret found yet"
+          fi
+---
+# Test 5: SwarmTask without repository access (should not get token)
+apiVersion: swarm.claudeflow.io/v1alpha1
+kind: SwarmTask
+metadata:
+  name: test-no-github
+  namespace: claude-flow-swarm
+spec:
+  swarmCluster: github-enabled-cluster
+  type: analysis
+  description: "Task without GitHub access"
+  
+  # No repositories specified - should not get GitHub token
+  
+  subtasks:
+  - name: verify-no-token
+    type: check
+    description: "Verify no GitHub token is provided"
+    parameters:
+      command: |
+        #!/bin/bash
+        if [ -z "$GITHUB_TOKEN" ]; then
+          echo "✅ Correctly no GitHub token provided"
+          exit 0
+        else
+          echo "❌ ERROR: GitHub token should not be available"
+          exit 1
+        fi
+---
+# ServiceAccount for test job
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: swarm-operator
+  namespace: claude-flow-swarm
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: swarm-operator
+  namespace: claude-flow-swarm
+rules:
+- apiGroups: ["swarm.claudeflow.io"]
+  resources: ["swarmagents", "swarmtasks"]
+  verbs: ["get", "list", "watch"]
+- apiGroups: [""]
+  resources: ["secrets"]
+  verbs: ["get", "list"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: swarm-operator
+  namespace: claude-flow-swarm
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: swarm-operator
+subjects:
+- kind: ServiceAccount
+  name: swarm-operator
+  namespace: claude-flow-swarm

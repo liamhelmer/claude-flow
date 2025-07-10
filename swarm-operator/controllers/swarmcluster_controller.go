@@ -56,8 +56,10 @@ const (
 // SwarmClusterReconciler reconciles a SwarmCluster object
 type SwarmClusterReconciler struct {
 	client.Client
-	Scheme   *runtime.Scheme
-	Recorder record.EventRecorder
+	Scheme            *runtime.Scheme
+	Recorder          record.EventRecorder
+	SwarmNamespace    string
+	HiveMindNamespace string
 }
 
 // +kubebuilder:rbac:groups=swarm.claudeflow.io,resources=swarmclusters,verbs=get;list;watch;create;update;patch;delete

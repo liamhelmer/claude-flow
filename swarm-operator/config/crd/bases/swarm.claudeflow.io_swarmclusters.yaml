@@ -1,0 +1,335 @@
+---
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  annotations:
+    controller-gen.kubebuilder.io/version: v0.14.0
+  name: swarmclusters.swarm.claudeflow.io
+spec:
+  group: swarm.claudeflow.io
+  names:
+    kind: SwarmCluster
+    listKind: SwarmClusterList
+    plural: swarmclusters
+    singular: swarmcluster
+  scope: Namespaced
+  versions:
+  - additionalPrinterColumns:
+    - jsonPath: .spec.topology
+      name: Topology
+      type: string
+    - jsonPath: .status.activeAgents
+      name: Active
+      type: integer
+    - jsonPath: .status.readyAgents
+      name: Ready
+      type: integer
+    - jsonPath: .status.phase
+      name: Phase
+      type: string
+    - jsonPath: .metadata.creationTimestamp
+      name: Age
+      type: date
+    name: v1alpha1
+    schema:
+      openAPIV3Schema:
+        description: SwarmCluster is the Schema for the swarmclusters API
+        properties:
+          apiVersion:
+            description: |-
+              APIVersion defines the versioned schema of this representation of an object.
+              Servers should convert recognized schemas to the latest internal value, and
+              may reject unrecognized values.
+              More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources
+            type: string
+          kind:
+            description: |-
+              Kind is a string value representing the REST resource this object represents.
+              Servers may infer this from the endpoint the client submits requests to.
+              Cannot be updated.
+              In CamelCase.
+              More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds
+            type: string
+          metadata:
+            type: object
+          spec:
+            description: SwarmClusterSpec defines the desired state of SwarmCluster
+            properties:
+              agentTemplate:
+                description: AgentTemplate defines the template for creating agents
+                properties:
+                  capabilities:
+                    description: Capabilities that agents in this swarm should have
+                    items:
+                      type: string
+                    type: array
+                  cognitivePatterns:
+                    description: CognitivePatterns defines the thinking patterns for
+                      agents
+                    items:
+                      type: string
+                    type: array
+                  resources:
+                    description: Resources defines resource requirements for agents
+                    properties:
+                      cpu:
+                        description: CPU requirement in millicores
+                        type: string
+                      memory:
+                        description: Memory requirement
+                        type: string
+                      storage:
+                        description: Storage requirement
+                        type: string
+                    type: object
+                type: object
+              autoScaling:
+                description: AutoScaling defines auto-scaling behavior
+                properties:
+                  enabled:
+                    description: Enabled indicates if auto-scaling is enabled
+                    type: boolean
+                  metrics:
+                    description: Metrics to use for scaling decisions
+                    items:
+                      description: ScalingMetric defines a metric for auto-scaling
+                      properties:
+                        target:
+                          description: Target value for the metric
+                          type: string
+                        type:
+                          description: Type of metric
+                          enum:
+                          - cpu
+                          - memory
+                          - task-queue
+                          - custom
+                          type: string
+                      required:
+                      - target
+                      - type
+                      type: object
+                    type: array
+                  scaleDownThreshold:
+                    default: 20
+                    description: ScaleDownThreshold percentage (0-100)
+                    format: int32
+                    maximum: 100
+                    minimum: 0
+                    type: integer
+                  scaleUpThreshold:
+                    default: 80
+                    description: ScaleUpThreshold percentage (0-100)
+                    format: int32
+                    maximum: 100
+                    minimum: 0
+                    type: integer
+                required:
+                - enabled
+                type: object
+              maxAgents:
+                default: 5
+                description: MaxAgents is the maximum number of agents in the swarm
+                format: int32
+                maximum: 100
+                minimum: 1
+                type: integer
+              minAgents:
+                default: 1
+                description: MinAgents is the minimum number of agents in the swarm
+                format: int32
+                maximum: 100
+                minimum: 1
+                type: integer
+              strategy:
+                default: balanced
+                description: Strategy defines how agents are selected and distributed
+                enum:
+                - balanced
+                - specialized
+                - adaptive
+                type: string
+              taskDistribution:
+                description: TaskDistribution defines how tasks are distributed among
+                  agents
+                properties:
+                  algorithm:
+                    default: capability-based
+                    description: Algorithm for task distribution
+                    enum:
+                    - round-robin
+                    - least-loaded
+                    - capability-based
+                    - priority-based
+                    type: string
+                  maxTasksPerAgent:
+                    default: 10
+                    description: MaxTasksPerAgent limits tasks per agent
+                    format: int32
+                    minimum: 1
+                    type: integer
+                  taskTimeout:
+                    default: 300
+                    description: TaskTimeout in seconds
+                    format: int32
+                    minimum: 1
+                    type: integer
+                required:
+                - algorithm
+                type: object
+              topology:
+                default: mesh
+                description: Topology defines the communication pattern between agents
+                enum:
+                - mesh
+                - hierarchical
+                - ring
+                - star
+                type: string
+            required:
+            - maxAgents
+            - topology
+            type: object
+          status:
+            description: SwarmClusterStatus defines the observed state of SwarmCluster
+            properties:
+              activeAgents:
+                description: ActiveAgents is the current number of active agents
+                format: int32
+                type: integer
+              conditions:
+                description: Conditions represent the latest available observations
+                  of the swarm's state
+                items:
+                  description: "Condition contains details for one aspect of the current
+                    state of this API Resource.\n---\nThis struct is intended for
+                    direct use as an array at the field path .status.conditions.  For
+                    example,\n\n\n\ttype FooStatus struct{\n\t    // Represents the
+                    observations of a foo's current state.\n\t    // Known .status.conditions.type
+                    are: \"Available\", \"Progressing\", and \"Degraded\"\n\t    //
+                    +patchMergeKey=type\n\t    // +patchStrategy=merge\n\t    // +listType=map\n\t
+                    \   // +listMapKey=type\n\t    Conditions []metav1.Condition `json:\"conditions,omitempty\"
+                    patchStrategy:\"merge\" patchMergeKey:\"type\" protobuf:\"bytes,1,rep,name=conditions\"`\n\n\n\t
+                    \   // other fields\n\t}"
+                  properties:
+                    lastTransitionTime:
+                      description: |-
+                        lastTransitionTime is the last time the condition transitioned from one status to another.
+                        This should be when the underlying condition changed.  If that is not known, then using the time when the API field changed is acceptable.
+                      format: date-time
+                      type: string
+                    message:
+                      description: |-
+                        message is a human readable message indicating details about the transition.
+                        This may be an empty string.
+                      maxLength: 32768
+                      type: string
+                    observedGeneration:
+                      description: |-
+                        observedGeneration represents the .metadata.generation that the condition was set based upon.
+                        For instance, if .metadata.generation is currently 12, but the .status.conditions[x].observedGeneration is 9, the condition is out of date
+                        with respect to the current state of the instance.
+                      format: int64
+                      minimum: 0
+                      type: integer
+                    reason:
+                      description: |-
+                        reason contains a programmatic identifier indicating the reason for the condition's last transition.
+                        Producers of specific condition types may define expected values and meanings for this field,
+                        and whether the values are considered a guaranteed API.
+                        The value should be a CamelCase string.
+                        This field may not be empty.
+                      maxLength: 1024
+                      minLength: 1
+                      pattern: ^[A-Za-z]([A-Za-z0-9_,:]*[A-Za-z0-9_])?$
+                      type: string
+                    status:
+                      description: status of the condition, one of True, False, Unknown.
+                      enum:
+                      - "True"
+                      - "False"
+                      - Unknown
+                      type: string
+                    type:
+                      description: |-
+                        type of condition in CamelCase or in foo.example.com/CamelCase.
+                        ---
+                        Many .condition.type values are consistent across resources like Available, but because arbitrary conditions can be
+                        useful (see .node.status.conditions), the ability to deconflict is important.
+                        The regex it matches is (dns1123SubdomainFmt/)?(qualifiedNameFmt)
+                      maxLength: 316
+                      pattern: ^([a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*/)?(([A-Za-z0-9][-A-Za-z0-9_.]*)?[A-Za-z0-9])$
+                      type: string
+                  required:
+                  - lastTransitionTime
+                  - message
+                  - reason
+                  - status
+                  - type
+                  type: object
+                type: array
+              lastScaleTime:
+                description: LastScaleTime is the last time the swarm was scaled
+                format: date-time
+                type: string
+              phase:
+                description: Phase represents the current phase of the swarm
+                enum:
+                - Pending
+                - Initializing
+                - Running
+                - Scaling
+                - Terminating
+                - Failed
+                type: string
+              readyAgents:
+                description: ReadyAgents is the number of agents ready to process
+                  tasks
+                format: int32
+                type: integer
+              taskStats:
+                description: TaskStats contains task execution statistics
+                properties:
+                  averageCompletionTime:
+                    description: Average task completion time in milliseconds
+                    format: int64
+                    type: integer
+                  failedTasks:
+                    description: Number of failed tasks
+                    format: int64
+                    type: integer
+                  queueSize:
+                    description: Current queue size
+                    format: int32
+                    type: integer
+                  successfulTasks:
+                    description: Number of successful tasks
+                    format: int64
+                    type: integer
+                  totalTasks:
+                    description: Total number of tasks processed
+                    format: int64
+                    type: integer
+                required:
+                - failedTasks
+                - queueSize
+                - successfulTasks
+                - totalTasks
+                type: object
+              topologyStatus:
+                additionalProperties:
+                  type: string
+                description: TopologyStatus contains topology-specific status information
+                type: object
+            required:
+            - activeAgents
+            - readyAgents
+            type: object
+        type: object
+    served: true
+    storage: true
+    subresources:
+      scale:
+        specReplicasPath: .spec.maxAgents
+        statusReplicasPath: .status.activeAgents
+      status: {}

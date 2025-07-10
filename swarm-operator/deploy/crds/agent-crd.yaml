@@ -1,0 +1,121 @@
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  name: agents.swarm.claudeflow.io
+spec:
+  group: swarm.claudeflow.io
+  versions:
+  - name: v1alpha1
+    served: true
+    storage: true
+    schema:
+      openAPIV3Schema:
+        type: object
+        properties:
+          spec:
+            type: object
+            required: ["type", "swarmRef"]
+            properties:
+              type:
+                type: string
+                enum: ["researcher", "coder", "analyst", "tester", "coordinator", "architect", "reviewer", "optimizer", "documenter", "monitor", "specialist"]
+              swarmRef:
+                type: string
+                description: "Reference to parent SwarmCluster"
+              capabilities:
+                type: array
+                items:
+                  type: string
+              cognitivePattern:
+                type: string
+                enum: ["convergent", "divergent", "lateral", "systems", "critical", "abstract"]
+                default: "convergent"
+              resources:
+                type: object
+                properties:
+                  requests:
+                    type: object
+                    properties:
+                      cpu:
+                        type: string
+                        default: "100m"
+                      memory:
+                        type: string
+                        default: "128Mi"
+                  limits:
+                    type: object
+                    properties:
+                      cpu:
+                        type: string
+                        default: "500m"
+                      memory:
+                        type: string
+                        default: "512Mi"
+              communication:
+                type: object
+                properties:
+                  endpoint:
+                    type: string
+                  port:
+                    type: integer
+                    default: 8080
+                  protocol:
+                    type: string
+                    enum: ["grpc", "http", "websocket"]
+                    default: "grpc"
+          status:
+            type: object
+            properties:
+              phase:
+                type: string
+                enum: ["Pending", "Running", "Ready", "Busy", "Failed", "Terminating"]
+              lastHeartbeat:
+                type: string
+              assignedTasks:
+                type: integer
+              completedTasks:
+                type: integer
+              peers:
+                type: array
+                items:
+                  type: string
+              conditions:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    type:
+                      type: string
+                    status:
+                      type: string
+                    lastTransitionTime:
+                      type: string
+                    reason:
+                      type: string
+                    message:
+                      type: string
+    subresources:
+      status: {}
+    additionalPrinterColumns:
+    - name: Type
+      type: string
+      jsonPath: .spec.type
+    - name: Swarm
+      type: string
+      jsonPath: .spec.swarmRef
+    - name: Phase
+      type: string
+      jsonPath: .status.phase
+    - name: Tasks
+      type: string
+      jsonPath: .status.assignedTasks
+    - name: Age
+      type: date
+      jsonPath: .metadata.creationTimestamp
+  scope: Namespaced
+  names:
+    plural: agents
+    singular: agent
+    kind: Agent
+    shortNames:
+    - ag

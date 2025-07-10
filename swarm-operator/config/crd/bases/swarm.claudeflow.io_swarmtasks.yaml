@@ -1,0 +1,451 @@
+---
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  annotations:
+    controller-gen.kubebuilder.io/version: v0.14.0
+  name: swarmtasks.swarm.claudeflow.io
+spec:
+  group: swarm.claudeflow.io
+  names:
+    kind: SwarmTask
+    listKind: SwarmTaskList
+    plural: swarmtasks
+    singular: swarmtask
+  scope: Namespaced
+  versions:
+  - additionalPrinterColumns:
+    - jsonPath: .spec.swarmCluster
+      name: Swarm
+      type: string
+    - jsonPath: .spec.type
+      name: Type
+      type: string
+    - jsonPath: .spec.priority
+      name: Priority
+      type: string
+    - jsonPath: .status.phase
+      name: Phase
+      type: string
+    - jsonPath: .status.progress
+      name: Progress
+      type: integer
+    - jsonPath: .metadata.creationTimestamp
+      name: Age
+      type: date
+    name: v1alpha1
+    schema:
+      openAPIV3Schema:
+        description: SwarmTask is the Schema for the swarmtasks API
+        properties:
+          apiVersion:
+            description: |-
+              APIVersion defines the versioned schema of this representation of an object.
+              Servers should convert recognized schemas to the latest internal value, and
+              may reject unrecognized values.
+              More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources
+            type: string
+          kind:
+            description: |-
+              Kind is a string value representing the REST resource this object represents.
+              Servers may infer this from the endpoint the client submits requests to.
+              Cannot be updated.
+              In CamelCase.
+              More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds
+            type: string
+          metadata:
+            type: object
+          spec:
+            description: SwarmTaskSpec defines the desired state of SwarmTask
+            properties:
+              dependencies:
+                description: Dependencies between subtasks
+                items:
+                  description: TaskDependency defines dependencies between subtasks
+                  properties:
+                    condition:
+                      description: Condition for conditional dependencies
+                      type: string
+                    from:
+                      description: From subtask name
+                      type: string
+                    to:
+                      description: To subtask name
+                      type: string
+                    type:
+                      default: completion
+                      description: Type of dependency
+                      enum:
+                      - completion
+                      - data
+                      - conditional
+                      type: string
+                  required:
+                  - from
+                  - to
+                  type: object
+                type: array
+              description:
+                description: Description of the task
+                type: string
+              parameters:
+                additionalProperties:
+                  type: string
+                description: Parameters for task execution
+                type: object
+              preferredAgentTypes:
+                description: PreferredAgentTypes for this task
+                items:
+                  description: AgentType defines the type of agent
+                  type: string
+                type: array
+              priority:
+                default: medium
+                description: Priority of the task
+                enum:
+                - low
+                - medium
+                - high
+                - critical
+                type: string
+              requiredCapabilities:
+                description: RequiredCapabilities that agents must have to process
+                  this task
+                items:
+                  type: string
+                type: array
+              resultStorage:
+                description: ResultStorage configuration
+                properties:
+                  name:
+                    description: Name of the storage resource
+                    type: string
+                  path:
+                    description: Path within the storage
+                    type: string
+                  ttl:
+                    description: TTL for result storage in seconds
+                    format: int32
+                    type: integer
+                  type:
+                    default: configmap
+                    description: Type of storage
+                    enum:
+                    - configmap
+                    - secret
+                    - s3
+                    - pvc
+                    type: string
+                required:
+                - type
+                type: object
+              retryPolicy:
+                description: RetryPolicy for failed tasks
+                properties:
+                  backoffMultiplier:
+                    default: 2
+                    description: BackoffMultiplier for exponential backoff
+                    type: number
+                  backoffSeconds:
+                    default: 30
+                    description: BackoffSeconds between retries
+                    format: int32
+                    minimum: 1
+                    type: integer
+                  maxRetries:
+                    default: 3
+                    description: MaxRetries allowed
+                    format: int32
+                    maximum: 10
+                    minimum: 0
+                    type: integer
+                required:
+                - maxRetries
+                type: object
+              strategy:
+                default: adaptive
+                description: Strategy for task execution
+                enum:
+                - parallel
+                - sequential
+                - adaptive
+                - balanced
+                type: string
+              subtasks:
+                description: Subtasks that compose this task
+                items:
+                  description: SubtaskSpec defines a subtask
+                  properties:
+                    description:
+                      description: Description of what this subtask does
+                      type: string
+                    estimatedDuration:
+                      description: EstimatedDuration in seconds
+                      format: int32
+                      type: integer
+                    name:
+                      description: Name of the subtask
+                      type: string
+                    parameters:
+                      additionalProperties:
+                        type: string
+                      description: Parameters specific to this subtask
+                      type: object
+                    requiredCapabilities:
+                      description: RequiredCapabilities for this subtask
+                      items:
+                        type: string
+                      type: array
+                    type:
+                      description: Type of subtask
+                      type: string
+                  required:
+                  - name
+                  - type
+                  type: object
+                type: array
+              swarmCluster:
+                description: SwarmCluster reference
+                type: string
+              timeout:
+                default: 300
+                description: Timeout in seconds
+                format: int32
+                minimum: 1
+                type: integer
+              type:
+                description: Type of task (e.g., "research", "development", "analysis")
+                type: string
+            required:
+            - description
+            - swarmCluster
+            - type
+            type: object
+          status:
+            description: SwarmTaskStatus defines the observed state of SwarmTask
+            properties:
+              assignedAgents:
+                description: AssignedAgents working on this task
+                items:
+                  description: AssignedAgent represents an agent assigned to the task
+                  properties:
+                    assignedSubtasks:
+                      description: Subtasks assigned to this agent
+                      items:
+                        type: string
+                      type: array
+                    name:
+                      description: Name of the agent
+                      type: string
+                    status:
+                      description: Status of this agent's work
+                      type: string
+                    type:
+                      description: Type of the agent
+                      type: string
+                  required:
+                  - name
+                  - type
+                  type: object
+                type: array
+              completionTime:
+                description: CompletionTime when the task completed
+                format: date-time
+                type: string
+              conditions:
+                description: Conditions represent the latest available observations
+                items:
+                  description: "Condition contains details for one aspect of the current
+                    state of this API Resource.\n---\nThis struct is intended for
+                    direct use as an array at the field path .status.conditions.  For
+                    example,\n\n\n\ttype FooStatus struct{\n\t    // Represents the
+                    observations of a foo's current state.\n\t    // Known .status.conditions.type
+                    are: \"Available\", \"Progressing\", and \"Degraded\"\n\t    //
+                    +patchMergeKey=type\n\t    // +patchStrategy=merge\n\t    // +listType=map\n\t
+                    \   // +listMapKey=type\n\t    Conditions []metav1.Condition `json:\"conditions,omitempty\"
+                    patchStrategy:\"merge\" patchMergeKey:\"type\" protobuf:\"bytes,1,rep,name=conditions\"`\n\n\n\t
+                    \   // other fields\n\t}"
+                  properties:
+                    lastTransitionTime:
+                      description: |-
+                        lastTransitionTime is the last time the condition transitioned from one status to another.
+                        This should be when the underlying condition changed.  If that is not known, then using the time when the API field changed is acceptable.
+                      format: date-time
+                      type: string
+                    message:
+                      description: |-
+                        message is a human readable message indicating details about the transition.
+                        This may be an empty string.
+                      maxLength: 32768
+                      type: string
+                    observedGeneration:
+                      description: |-
+                        observedGeneration represents the .metadata.generation that the condition was set based upon.
+                        For instance, if .metadata.generation is currently 12, but the .status.conditions[x].observedGeneration is 9, the condition is out of date
+                        with respect to the current state of the instance.
+                      format: int64
+                      minimum: 0
+                      type: integer
+                    reason:
+                      description: |-
+                        reason contains a programmatic identifier indicating the reason for the condition's last transition.
+                        Producers of specific condition types may define expected values and meanings for this field,
+                        and whether the values are considered a guaranteed API.
+                        The value should be a CamelCase string.
+                        This field may not be empty.
+                      maxLength: 1024
+                      minLength: 1
+                      pattern: ^[A-Za-z]([A-Za-z0-9_,:]*[A-Za-z0-9_])?$
+                      type: string
+                    status:
+                      description: status of the condition, one of True, False, Unknown.
+                      enum:
+                      - "True"
+                      - "False"
+                      - Unknown
+                      type: string
+                    type:
+                      description: |-
+                        type of condition in CamelCase or in foo.example.com/CamelCase.
+                        ---
+                        Many .condition.type values are consistent across resources like Available, but because arbitrary conditions can be
+                        useful (see .node.status.conditions), the ability to deconflict is important.
+                        The regex it matches is (dns1123SubdomainFmt/)?(qualifiedNameFmt)
+                      maxLength: 316
+                      pattern: ^([a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*/)?(([A-Za-z0-9][-A-Za-z0-9_.]*)?[A-Za-z0-9])$
+                      type: string
+                  required:
+                  - lastTransitionTime
+                  - message
+                  - reason
+                  - status
+                  - type
+                  type: object
+                type: array
+              message:
+                description: Message provides additional information
+                type: string
+              phase:
+                description: Phase of the task
+                enum:
+                - Pending
+                - Scheduled
+                - Running
+                - Completed
+                - Failed
+                - Cancelled
+                type: string
+              progress:
+                description: Progress percentage (0-100)
+                format: int32
+                type: integer
+              result:
+                description: Result of the task execution
+                properties:
+                  data:
+                    additionalProperties:
+                      type: string
+                    description: Data contains the result data
+                    type: object
+                  metrics:
+                    description: Metrics collected during execution
+                    properties:
+                      agentsUsed:
+                        description: AgentsUsed count
+                        format: int32
+                        type: integer
+                      costEstimate:
+                        description: CostEstimate if applicable
+                        type: number
+                      executionTime:
+                        description: ExecutionTime in seconds
+                        format: int64
+                        type: integer
+                      subtasksCompleted:
+                        description: SubtasksCompleted count
+                        format: int32
+                        type: integer
+                      tokensConsumed:
+                        description: TokensConsumed if applicable
+                        format: int64
+                        type: integer
+                    required:
+                    - agentsUsed
+                    - executionTime
+                    - subtasksCompleted
+                    type: object
+                  storageRef:
+                    description: StorageRef points to where full results are stored
+                    type: string
+                  success:
+                    description: Success indicates if the task completed successfully
+                    type: boolean
+                  summary:
+                    description: Summary of the task execution
+                    type: string
+                required:
+                - success
+                type: object
+              retryCount:
+                description: RetryCount tracks retry attempts
+                format: int32
+                type: integer
+              startTime:
+                description: StartTime when the task started
+                format: date-time
+                type: string
+              subtaskStatuses:
+                description: SubtaskStatuses for each subtask
+                items:
+                  description: SubtaskStatus represents the status of a subtask
+                  properties:
+                    assignedAgent:
+                      description: AssignedAgent for this subtask
+                      type: string
+                    completionTime:
+                      description: CompletionTime of the subtask
+                      format: date-time
+                      type: string
+                    error:
+                      description: Error message if failed
+                      type: string
+                    name:
+                      description: Name of the subtask
+                      type: string
+                    phase:
+                      description: Phase of the subtask
+                      enum:
+                      - Pending
+                      - Running
+                      - Completed
+                      - Failed
+                      - Skipped
+                      type: string
+                    progress:
+                      description: Progress percentage (0-100)
+                      format: int32
+                      type: integer
+                    result:
+                      additionalProperties:
+                        type: string
+                      description: Result of the subtask
+                      type: object
+                    startTime:
+                      description: StartTime of the subtask
+                      format: date-time
+                      type: string
+                  required:
+                  - name
+                  - phase
+                  - progress
+                  type: object
+                type: array
+            required:
+            - progress
+            - retryCount
+            type: object
+        type: object
+    served: true
+    storage: true
+    subresources:
+      status: {}

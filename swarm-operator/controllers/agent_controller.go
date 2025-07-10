@@ -51,6 +51,7 @@ type AgentReconciler struct {
 	Scheme          *runtime.Scheme
 	Recorder        record.EventRecorder
 	MetricsRecorder *metrics.MetricsRecorder
+	SwarmNamespace  string
 }
 
 // +kubebuilder:rbac:groups=swarm.claudeflow.io,resources=agents,verbs=get;list;watch;create;update;patch;delete

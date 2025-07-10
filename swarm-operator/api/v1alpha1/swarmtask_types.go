@@ -89,6 +89,16 @@ type SwarmTaskSpec struct {
 
 	// ResultStorage configuration
 	ResultStorage ResultStorageSpec `json:"resultStorage,omitempty"`
+
+	// Repositories is a list of GitHub repositories this task needs access to
+	// Format: owner/repo (e.g., "claude-flow/swarm-operator")
+	Repositories []string `json:"repositories,omitempty"`
+
+	// GitHubApp configuration for repository access
+	GitHubApp *GitHubAppConfig `json:"githubApp,omitempty"`
+
+	// Namespace to run this task in (defaults based on task type)
+	Namespace string `json:"namespace,omitempty"`
 }
 
 // SubtaskSpec defines a subtask
@@ -145,6 +155,34 @@ type RetryPolicy struct {
 	// BackoffMultiplier for exponential backoff
 	// +kubebuilder:default=2
 	BackoffMultiplier float64 `json:"backoffMultiplier,omitempty"`
+}
+
+// GitHubAppConfig defines GitHub App configuration for repository access
+type GitHubAppConfig struct {
+	// AppID is the GitHub App ID
+	AppID int64 `json:"appID"`
+
+	// PrivateKeyRef references a Secret containing the GitHub App private key
+	PrivateKeyRef SecretKeyRef `json:"privateKeyRef"`
+
+	// InstallationID for the GitHub App (optional, will be auto-discovered if not provided)
+	InstallationID int64 `json:"installationID,omitempty"`
+
+	// TokenTTL is the duration for which generated tokens are valid
+	// +kubebuilder:default="1h"
+	TokenTTL string `json:"tokenTTL,omitempty"`
+}
+
+// SecretKeyRef references a key in a Secret
+type SecretKeyRef struct {
+	// Name of the Secret
+	Name string `json:"name"`
+
+	// Key within the Secret
+	Key string `json:"key"`
+
+	// Namespace of the Secret (defaults to same namespace as the resource)
+	Namespace string `json:"namespace,omitempty"`
 }
 
 // ResultStorageSpec defines where to store results

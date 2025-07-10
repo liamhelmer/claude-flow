@@ -1,0 +1,617 @@
+# Namespace for the swarm operator
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: swarm-operator-system
+  labels:
+    control-plane: swarm-operator
+    swarm.claude-flow.ai/managed: "true"
+
+---
+# ServiceAccount for the operator
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: swarm-operator
+  namespace: swarm-operator-system
+  labels:
+    app.kubernetes.io/name: swarm-operator
+    app.kubernetes.io/instance: swarm-operator
+    app.kubernetes.io/component: controller
+    app.kubernetes.io/managed-by: kustomize
+
+---
+# ClusterRole with all necessary permissions
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: swarm-operator-role
+rules:
+# Core resources
+- apiGroups: [""]
+  resources:
+  - pods
+  - services
+  - endpoints
+  - persistentvolumeclaims
+  - events
+  - configmaps
+  - secrets
+  - namespaces
+  - serviceaccounts
+  verbs: ["*"]
+- apiGroups: [""]
+  resources:
+  - nodes
+  verbs: ["get", "list", "watch"]
+
+# Apps resources
+- apiGroups: ["apps"]
+  resources:
+  - deployments
+  - daemonsets
+  - replicasets
+  - statefulsets
+  verbs: ["*"]
+
+# Batch resources
+- apiGroups: ["batch"]
+  resources:
+  - jobs
+  - cronjobs
+  verbs: ["*"]
+
+# Autoscaling resources
+- apiGroups: ["autoscaling"]
+  resources:
+  - horizontalpodautoscalers
+  verbs: ["*"]
+- apiGroups: ["autoscaling.k8s.io"]
+  resources:
+  - verticalpodautoscalers
+  verbs: ["*"]
+
+# Policy resources
+- apiGroups: ["policy"]
+  resources:
+  - poddisruptionbudgets
+  verbs: ["*"]
+
+# RBAC resources
+- apiGroups: ["rbac.authorization.k8s.io"]
+  resources:
+  - roles
+  - rolebindings
+  - clusterroles
+  - clusterrolebindings
+  verbs: ["*"]
+
+# Networking resources
+- apiGroups: ["networking.k8s.io"]
+  resources:
+  - networkpolicies
+  - ingresses
+  verbs: ["*"]
+
+# Storage resources
+- apiGroups: ["storage.k8s.io"]
+  resources:
+  - storageclasses
+  - volumeattachments
+  verbs: ["get", "list", "watch"]
+
+# Custom resources
+- apiGroups: ["swarm.claude-flow.ai"]
+  resources:
+  - swarmclusters
+  - swarmclusters/status
+  - swarmclusters/scale
+  - swarmagents
+  - swarmagents/status
+  - swarmagents/scale
+  - swarmmemories
+  - swarmmemories/status
+  verbs: ["*"]
+
+# Metrics resources
+- apiGroups: ["metrics.k8s.io"]
+  resources:
+  - pods
+  - nodes
+  verbs: ["get", "list"]
+
+# Coordination resources
+- apiGroups: ["coordination.k8s.io"]
+  resources:
+  - leases
+  verbs: ["*"]
+
+# API extensions
+- apiGroups: ["apiextensions.k8s.io"]
+  resources:
+  - customresourcedefinitions
+  verbs: ["get", "list", "watch"]
+
+---
+# ClusterRoleBinding
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: swarm-operator-rolebinding
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: swarm-operator-role
+subjects:
+- kind: ServiceAccount
+  name: swarm-operator
+  namespace: swarm-operator-system
+
+---
+# Leader election Role
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: swarm-operator-leader-election-role
+  namespace: swarm-operator-system
+rules:
+- apiGroups: [""]
+  resources: ["configmaps"]
+  verbs: ["get", "list", "watch", "create", "update", "patch", "delete"]
+- apiGroups: ["coordination.k8s.io"]
+  resources: ["leases"]
+  verbs: ["get", "list", "watch", "create", "update", "patch", "delete"]
+- apiGroups: [""]
+  resources: ["events"]
+  verbs: ["create", "patch"]
+
+---
+# Leader election RoleBinding
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: swarm-operator-leader-election-rolebinding
+  namespace: swarm-operator-system
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: swarm-operator-leader-election-role
+subjects:
+- kind: ServiceAccount
+  name: swarm-operator
+  namespace: swarm-operator-system
+
+---
+# ConfigMap for operator configuration
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: swarm-operator-config
+  namespace: swarm-operator-system
+data:
+  config.yaml: |
+    # Operator configuration
+    health:
+      healthProbeBindAddress: :8081
+    metrics:
+      bindAddress: 127.0.0.1:8080
+    webhook:
+      port: 9443
+    leaderElection:
+      leaderElect: true
+      resourceName: swarm-operator-leader
+      resourceNamespace: swarm-operator-system
+    
+    # Swarm defaults
+    swarmDefaults:
+      maxAgents: 50
+      defaultTopology: mesh
+      defaultStrategy: balanced
+      enableMonitoring: true
+      enableAutoscaling: true
+      
+    # Neural model configuration
+    neuralModels:
+      defaultCheckpointPath: s3://claude-flow-models/swarm/
+      enableAutoUpdate: true
+      updateCheckInterval: 24h
+      supportedTypes:
+        - transformer
+        - lstm
+        - gnn
+        - hybrid
+      
+    # Storage configuration
+    storage:
+      defaultStorageClass: standard
+      sharedMemorySize: 10Gi
+      modelCacheSize: 50Gi
+      
+    # Monitoring configuration
+    monitoring:
+      prometheusNamespace: monitoring
+      grafanaNamespace: monitoring
+      defaultDashboards:
+        - swarm-overview
+        - agent-performance
+        - neural-metrics
+        - cost-analysis
+      
+    # Feature flags
+    features:
+      enableHiveMind: true
+      enablePredictiveScaling: true
+      enableCostOptimization: true
+      enableNeuralSync: true
+      enableAdvancedScheduling: true
+
+---
+# Secret for webhook certificates
+apiVersion: v1
+kind: Secret
+metadata:
+  name: swarm-operator-webhook-tls
+  namespace: swarm-operator-system
+type: Opaque
+data:
+  # Placeholder - actual certificates would be generated
+  tls.crt: LS0tLS1CRUdJTiBDRVJUSUZJQ0FURS0tLS0tCi4uLgotLS0tLUVORCBDRVJUSUZJQ0FURS0tLS0t
+  tls.key: LS0tLS1CRUdJTiBSU0EgUFJJVkFURSBLRVktLS0tLQouLi4KLS0tLS1FTkQgUlNBIFBSSVZBVEUgS0VZLS0tLS0=
+
+---
+# Deployment for the operator
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: swarm-operator
+  namespace: swarm-operator-system
+  labels:
+    app.kubernetes.io/name: swarm-operator
+    app.kubernetes.io/instance: swarm-operator
+    app.kubernetes.io/component: controller
+    control-plane: swarm-operator
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: swarm-operator
+      app.kubernetes.io/instance: swarm-operator
+      control-plane: swarm-operator
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: swarm-operator
+        app.kubernetes.io/instance: swarm-operator
+        control-plane: swarm-operator
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "8080"
+        prometheus.io/path: "/metrics"
+    spec:
+      serviceAccountName: swarm-operator
+      terminationGracePeriodSeconds: 10
+      containers:
+      - name: manager
+        image: claude-flow/swarm-operator:v2.0.0
+        imagePullPolicy: IfNotPresent
+        command:
+        - /manager
+        args:
+        - --config=/etc/swarm-operator/config.yaml
+        - --enable-leader-election
+        - --metrics-bind-address=:8080
+        - --health-probe-bind-address=:8081
+        - --webhook-port=9443
+        env:
+        - name: OPERATOR_NAMESPACE
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.namespace
+        - name: OPERATOR_NAME
+          value: "swarm-operator"
+        - name: ENABLE_WEBHOOKS
+          value: "true"
+        - name: ENABLE_HIVEMIND
+          value: "true"
+        - name: ENABLE_NEURAL_MODELS
+          value: "true"
+        ports:
+        - containerPort: 9443
+          name: webhook-server
+          protocol: TCP
+        - containerPort: 8080
+          name: metrics
+          protocol: TCP
+        - containerPort: 8081
+          name: health
+          protocol: TCP
+        livenessProbe:
+          httpGet:
+            path: /healthz
+            port: health
+          initialDelaySeconds: 15
+          periodSeconds: 20
+        readinessProbe:
+          httpGet:
+            path: /readyz
+            port: health
+          initialDelaySeconds: 5
+          periodSeconds: 10
+        resources:
+          limits:
+            cpu: 1000m
+            memory: 512Mi
+          requests:
+            cpu: 100m
+            memory: 128Mi
+        securityContext:
+          allowPrivilegeEscalation: false
+          capabilities:
+            drop:
+            - ALL
+          readOnlyRootFilesystem: true
+          runAsNonRoot: true
+          runAsUser: 65532
+        volumeMounts:
+        - mountPath: /etc/swarm-operator
+          name: config
+          readOnly: true
+        - mountPath: /tmp/k8s-webhook-server/serving-certs
+          name: cert
+          readOnly: true
+        - mountPath: /tmp
+          name: temp
+      volumes:
+      - name: config
+        configMap:
+          name: swarm-operator-config
+      - name: cert
+        secret:
+          defaultMode: 420
+          secretName: swarm-operator-webhook-tls
+      - name: temp
+        emptyDir: {}
+      affinity:
+        podAntiAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+          - weight: 100
+            podAffinityTerm:
+              labelSelector:
+                matchExpressions:
+                - key: control-plane
+                  operator: In
+                  values:
+                  - swarm-operator
+              topologyKey: kubernetes.io/hostname
+
+---
+# Service for webhook
+apiVersion: v1
+kind: Service
+metadata:
+  name: swarm-operator-webhook-service
+  namespace: swarm-operator-system
+spec:
+  ports:
+  - name: https
+    port: 443
+    targetPort: webhook-server
+  selector:
+    control-plane: swarm-operator
+
+---
+# Service for metrics
+apiVersion: v1
+kind: Service
+metadata:
+  name: swarm-operator-metrics-service
+  namespace: swarm-operator-system
+  labels:
+    app.kubernetes.io/name: swarm-operator
+    app.kubernetes.io/instance: swarm-operator
+    app.kubernetes.io/component: metrics
+spec:
+  ports:
+  - name: metrics
+    port: 8080
+    targetPort: metrics
+  selector:
+    control-plane: swarm-operator
+
+---
+# ValidatingWebhookConfiguration
+apiVersion: admissionregistration.k8s.io/v1
+kind: ValidatingWebhookConfiguration
+metadata:
+  name: swarm-operator-validating-webhook-configuration
+webhooks:
+- admissionReviewVersions:
+  - v1
+  - v1beta1
+  clientConfig:
+    service:
+      name: swarm-operator-webhook-service
+      namespace: swarm-operator-system
+      path: /validate-swarm-claude-flow-ai-v1alpha1-swarmcluster
+  failurePolicy: Fail
+  name: vswarmcluster.kb.io
+  rules:
+  - apiGroups:
+    - swarm.claude-flow.ai
+    apiVersions:
+    - v1alpha1
+    operations:
+    - CREATE
+    - UPDATE
+    resources:
+    - swarmclusters
+  sideEffects: None
+- admissionReviewVersions:
+  - v1
+  - v1beta1
+  clientConfig:
+    service:
+      name: swarm-operator-webhook-service
+      namespace: swarm-operator-system
+      path: /validate-swarm-claude-flow-ai-v1alpha1-swarmagent
+  failurePolicy: Fail
+  name: vswarmagent.kb.io
+  rules:
+  - apiGroups:
+    - swarm.claude-flow.ai
+    apiVersions:
+    - v1alpha1
+    operations:
+    - CREATE
+    - UPDATE
+    resources:
+    - swarmagents
+  sideEffects: None
+
+---
+# MutatingWebhookConfiguration
+apiVersion: admissionregistration.k8s.io/v1
+kind: MutatingWebhookConfiguration
+metadata:
+  name: swarm-operator-mutating-webhook-configuration
+webhooks:
+- admissionReviewVersions:
+  - v1
+  - v1beta1
+  clientConfig:
+    service:
+      name: swarm-operator-webhook-service
+      namespace: swarm-operator-system
+      path: /mutate-swarm-claude-flow-ai-v1alpha1-swarmcluster
+  failurePolicy: Fail
+  name: mswarmcluster.kb.io
+  rules:
+  - apiGroups:
+    - swarm.claude-flow.ai
+    apiVersions:
+    - v1alpha1
+    operations:
+    - CREATE
+    - UPDATE
+    resources:
+    - swarmclusters
+  sideEffects: None
+- admissionReviewVersions:
+  - v1
+  - v1beta1
+  clientConfig:
+    service:
+      name: swarm-operator-webhook-service
+      namespace: swarm-operator-system
+      path: /mutate-swarm-claude-flow-ai-v1alpha1-swarmagent
+  failurePolicy: Fail
+  name: mswarmagent.kb.io
+  rules:
+  - apiGroups:
+    - swarm.claude-flow.ai
+    apiVersions:
+    - v1alpha1
+    operations:
+    - CREATE
+    - UPDATE
+    resources:
+    - swarmagents
+  sideEffects: None
+
+---
+# ServiceMonitor for Prometheus integration
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: swarm-operator-metrics
+  namespace: swarm-operator-system
+  labels:
+    app.kubernetes.io/name: swarm-operator
+    app.kubernetes.io/instance: swarm-operator
+    app.kubernetes.io/component: metrics
+spec:
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: swarm-operator
+      app.kubernetes.io/instance: swarm-operator
+      app.kubernetes.io/component: metrics
+  endpoints:
+  - port: metrics
+    interval: 30s
+    path: /metrics
+    scheme: http
+
+---
+# PodDisruptionBudget for operator availability
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: swarm-operator-pdb
+  namespace: swarm-operator-system
+spec:
+  minAvailable: 1
+  selector:
+    matchLabels:
+      control-plane: swarm-operator
+
+---
+# NetworkPolicy for operator security
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: swarm-operator-network-policy
+  namespace: swarm-operator-system
+spec:
+  podSelector:
+    matchLabels:
+      control-plane: swarm-operator
+  policyTypes:
+  - Ingress
+  - Egress
+  ingress:
+  - from:
+    - namespaceSelector:
+        matchLabels:
+          name: kube-system
+    ports:
+    - protocol: TCP
+      port: 9443
+  - from:
+    - namespaceSelector:
+        matchLabels:
+          name: monitoring
+    ports:
+    - protocol: TCP
+      port: 8080
+  - from:
+    - podSelector: {}
+    ports:
+    - protocol: TCP
+      port: 8081
+  egress:
+  - to:
+    - namespaceSelector: {}
+  - to:
+    - namespaceSelector:
+        matchLabels:
+          name: kube-system
+    ports:
+    - protocol: TCP
+      port: 443
+  - ports:
+    - protocol: TCP
+      port: 443
+    - protocol: TCP
+      port: 80
+    to:
+    - podSelector: {}
+
+---
+# PriorityClass for operator pods
+apiVersion: scheduling.k8s.io/v1
+kind: PriorityClass
+metadata:
+  name: swarm-operator-priority
+value: 1000000
+globalDefault: false
+description: "Priority class for swarm operator pods"

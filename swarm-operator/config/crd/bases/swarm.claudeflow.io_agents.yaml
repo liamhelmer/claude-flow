@@ -1,0 +1,329 @@
+---
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  annotations:
+    controller-gen.kubebuilder.io/version: v0.14.0
+  name: agents.swarm.claudeflow.io
+spec:
+  group: swarm.claudeflow.io
+  names:
+    kind: Agent
+    listKind: AgentList
+    plural: agents
+    singular: agent
+  scope: Namespaced
+  versions:
+  - additionalPrinterColumns:
+    - jsonPath: .spec.type
+      name: Type
+      type: string
+    - jsonPath: .spec.swarmCluster
+      name: Swarm
+      type: string
+    - jsonPath: .status.phase
+      name: Phase
+      type: string
+    - jsonPath: .status.completedTasks
+      name: Tasks
+      type: integer
+    - jsonPath: .metadata.creationTimestamp
+      name: Age
+      type: date
+    name: v1alpha1
+    schema:
+      openAPIV3Schema:
+        description: Agent is the Schema for the agents API
+        properties:
+          apiVersion:
+            description: |-
+              APIVersion defines the versioned schema of this representation of an object.
+              Servers should convert recognized schemas to the latest internal value, and
+              may reject unrecognized values.
+              More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources
+            type: string
+          kind:
+            description: |-
+              Kind is a string value representing the REST resource this object represents.
+              Servers may infer this from the endpoint the client submits requests to.
+              Cannot be updated.
+              In CamelCase.
+              More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds
+            type: string
+          metadata:
+            type: object
+          spec:
+            description: AgentSpec defines the desired state of Agent
+            properties:
+              capabilities:
+                description: Capabilities that this agent has
+                items:
+                  type: string
+                type: array
+              cognitivePattern:
+                default: adaptive
+                description: CognitivePattern defines the thinking pattern
+                enum:
+                - convergent
+                - divergent
+                - lateral
+                - systems
+                - critical
+                - adaptive
+                type: string
+              communication:
+                description: CommunicationEndpoints for inter-agent communication
+                properties:
+                  broadcastEnabled:
+                    description: BroadcastEnabled allows broadcasting to all peers
+                    type: boolean
+                  peers:
+                    description: Peers that this agent can communicate with
+                    items:
+                      type: string
+                    type: array
+                  port:
+                    default: 8080
+                    description: Port for communication
+                    format: int32
+                    maximum: 65535
+                    minimum: 1
+                    type: integer
+                  protocol:
+                    default: grpc
+                    description: Protocol for communication
+                    enum:
+                    - grpc
+                    - http
+                    - websocket
+                    type: string
+                type: object
+              resources:
+                description: Resources defines resource requirements
+                properties:
+                  cpu:
+                    description: CPU requirement in millicores
+                    type: string
+                  memory:
+                    description: Memory requirement
+                    type: string
+                  storage:
+                    description: Storage requirement
+                    type: string
+                type: object
+              swarmCluster:
+                description: SwarmCluster reference
+                type: string
+              taskAffinity:
+                description: TaskAffinity defines task preferences
+                items:
+                  description: TaskAffinityRule defines task affinity rules
+                  properties:
+                    priority:
+                      description: Priority for this task type (0-100)
+                      format: int32
+                      maximum: 100
+                      minimum: 0
+                      type: integer
+                    requiredCapabilities:
+                      description: Required capabilities for this task
+                      items:
+                        type: string
+                      type: array
+                    taskType:
+                      description: TaskType that this rule applies to
+                      type: string
+                  required:
+                  - priority
+                  - taskType
+                  type: object
+                type: array
+              type:
+                description: Type defines the agent type
+                enum:
+                - researcher
+                - coder
+                - analyst
+                - optimizer
+                - coordinator
+                - architect
+                - tester
+                - reviewer
+                - documenter
+                - monitor
+                - specialist
+                type: string
+            required:
+            - swarmCluster
+            - type
+            type: object
+          status:
+            description: AgentStatus defines the observed state of Agent
+            properties:
+              communicationStatus:
+                additionalProperties:
+                  description: PeerStatus represents communication status with a peer
+                  properties:
+                    connected:
+                      description: Connected indicates if peer is connected
+                      type: boolean
+                    lastContact:
+                      description: LastContact time with the peer
+                      format: date-time
+                      type: string
+                    latency:
+                      description: Latency in milliseconds
+                      format: int32
+                      type: integer
+                  required:
+                  - connected
+                  type: object
+                description: CommunicationStatus with peers
+                type: object
+              completedTasks:
+                description: CompletedTasks count
+                format: int64
+                type: integer
+              conditions:
+                description: Conditions represent the latest available observations
+                items:
+                  description: "Condition contains details for one aspect of the current
+                    state of this API Resource.\n---\nThis struct is intended for
+                    direct use as an array at the field path .status.conditions.  For
+                    example,\n\n\n\ttype FooStatus struct{\n\t    // Represents the
+                    observations of a foo's current state.\n\t    // Known .status.conditions.type
+                    are: \"Available\", \"Progressing\", and \"Degraded\"\n\t    //
+                    +patchMergeKey=type\n\t    // +patchStrategy=merge\n\t    // +listType=map\n\t
+                    \   // +listMapKey=type\n\t    Conditions []metav1.Condition `json:\"conditions,omitempty\"
+                    patchStrategy:\"merge\" patchMergeKey:\"type\" protobuf:\"bytes,1,rep,name=conditions\"`\n\n\n\t
+                    \   // other fields\n\t}"
+                  properties:
+                    lastTransitionTime:
+                      description: |-
+                        lastTransitionTime is the last time the condition transitioned from one status to another.
+                        This should be when the underlying condition changed.  If that is not known, then using the time when the API field changed is acceptable.
+                      format: date-time
+                      type: string
+                    message:
+                      description: |-
+                        message is a human readable message indicating details about the transition.
+                        This may be an empty string.
+                      maxLength: 32768
+                      type: string
+                    observedGeneration:
+                      description: |-
+                        observedGeneration represents the .metadata.generation that the condition was set based upon.
+                        For instance, if .metadata.generation is currently 12, but the .status.conditions[x].observedGeneration is 9, the condition is out of date
+                        with respect to the current state of the instance.
+                      format: int64
+                      minimum: 0
+                      type: integer
+                    reason:
+                      description: |-
+                        reason contains a programmatic identifier indicating the reason for the condition's last transition.
+                        Producers of specific condition types may define expected values and meanings for this field,
+                        and whether the values are considered a guaranteed API.
+                        The value should be a CamelCase string.
+                        This field may not be empty.
+                      maxLength: 1024
+                      minLength: 1
+                      pattern: ^[A-Za-z]([A-Za-z0-9_,:]*[A-Za-z0-9_])?$
+                      type: string
+                    status:
+                      description: status of the condition, one of True, False, Unknown.
+                      enum:
+                      - "True"
+                      - "False"
+                      - Unknown
+                      type: string
+                    type:
+                      description: |-
+                        type of condition in CamelCase or in foo.example.com/CamelCase.
+                        ---
+                        Many .condition.type values are consistent across resources like Available, but because arbitrary conditions can be
+                        useful (see .node.status.conditions), the ability to deconflict is important.
+                        The regex it matches is (dns1123SubdomainFmt/)?(qualifiedNameFmt)
+                      maxLength: 316
+                      pattern: ^([a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*/)?(([A-Za-z0-9][-A-Za-z0-9_.]*)?[A-Za-z0-9])$
+                      type: string
+                  required:
+                  - lastTransitionTime
+                  - message
+                  - reason
+                  - status
+                  - type
+                  type: object
+                type: array
+              currentTasks:
+                description: CurrentTasks being processed
+                items:
+                  description: TaskReference references a task being processed
+                  properties:
+                    name:
+                      description: Name of the task
+                      type: string
+                    progress:
+                      description: Progress percentage (0-100)
+                      format: int32
+                      type: integer
+                    startTime:
+                      description: StartTime when the task started
+                      format: date-time
+                      type: string
+                    type:
+                      description: Type of the task
+                      type: string
+                  required:
+                  - name
+                  - startTime
+                  - type
+                  type: object
+                type: array
+              failedTasks:
+                description: FailedTasks count
+                format: int64
+                type: integer
+              lastHeartbeat:
+                description: LastHeartbeat time
+                format: date-time
+                type: string
+              metrics:
+                description: Metrics contains agent performance metrics
+                properties:
+                  averageTaskTime:
+                    description: Average task completion time in ms
+                    format: int64
+                    type: integer
+                  cpuUsage:
+                    description: CPU usage percentage
+                    type: number
+                  memoryUsage:
+                    description: Memory usage in bytes
+                    format: int64
+                    type: integer
+                  successRate:
+                    description: Success rate percentage
+                    type: number
+                  taskThroughput:
+                    description: Task throughput per minute
+                    type: number
+                type: object
+              phase:
+                description: Phase represents the current phase of the agent
+                enum:
+                - Pending
+                - Initializing
+                - Ready
+                - Busy
+                - Terminating
+                - Failed
+                type: string
+            required:
+            - completedTasks
+            - failedTasks
+            type: object
+        type: object
+    served: true
+    storage: true
+    subresources:
+      status: {}
