@@ -1,0 +1,94 @@
+{
+  "timestamp": "2025-07-09T19:00:54.961Z",
+  "version": "1.0",
+  "entries": [
+    {
+      "id": "entry_mcwbr2uo_gyxrn2olc",
+      "key": "swarm/cli/structure",
+      "value": "Created kubectl-swarm directory structure with main.go and root command",
+      "type": "string",
+      "namespace": "default",
+      "tags": [],
+      "metadata": {},
+      "owner": "system",
+      "accessLevel": "shared",
+      "createdAt": "2025-07-09T19:00:54.960Z",
+      "updatedAt": "2025-07-09T19:00:54.960Z",
+      "lastAccessedAt": "2025-07-09T19:00:54.960Z",
+      "version": 1,
+      "size": 102,
+      "compressed": false,
+      "checksum": "b7d17d61a7388f7c0d49e7cbe55db46828d0109d0946babbc0376a3cecfaac9c",
+      "references": [],
+      "dependencies": []
+    }
+  ],
+  "statistics": {
+    "overview": {
+      "totalEntries": 1,
+      "totalSize": 102,
+      "compressedEntries": 0,
+      "compressionRatio": 1,
+      "indexSize": 50,
+      "memoryUsage": 9030720,
+      "diskUsage": 0
+    },
+    "distribution": {
+      "byNamespace": {
+        "default": {
+          "count": 1,
+          "size": 102
+        }
+      },
+      "byType": {
+        "string": {
+          "count": 1,
+          "size": 102
+        }
+      },
+      "byOwner": {
+        "system": {
+          "count": 1,
+          "size": 102
+        }
+      },
+      "byAccessLevel": {
+        "shared": {
+          "count": 1,
+          "size": 102
+        }
+      }
+    },
+    "temporal": {
+      "entriesCreatedLast24h": 1,
+      "entriesUpdatedLast24h": 1,
+      "entriesAccessedLast24h": 1,
+      "oldestEntry": "2025-07-09T19:00:54.960Z",
+      "newestEntry": "2025-07-09T19:00:54.960Z"
+    },
+    "performance": {
+      "averageQueryTime": 0,
+      "averageWriteTime": 0,
+      "cacheHitRatio": 0,
+      "indexEfficiency": 0.95
+    },
+    "health": {
+      "expiredEntries": 0,
+      "orphanedReferences": 0,
+      "duplicateKeys": 0,
+      "corruptedEntries": 0,
+      "recommendedCleanup": false
+    },
+    "optimization": {
+      "suggestions": [],
+      "potentialSavings": {
+        "compression": 0,
+        "cleanup": 0,
+        "deduplication": 0
+      },
+      "indexOptimization": [
+        "Consider periodic index rebuilding for optimal performance"
+      ]
+    }
+  }
+}

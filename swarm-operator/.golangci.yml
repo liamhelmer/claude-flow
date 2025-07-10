@@ -1,0 +1,141 @@
+run:
+  timeout: 5m
+  tests: true
+  build-tags:
+    - integration
+    - e2e
+
+linters:
+  enable:
+    - gofmt
+    - goimports
+    - golint
+    - govet
+    - errcheck
+    - staticcheck
+    - unused
+    - gosimple
+    - structcheck
+    - varcheck
+    - ineffassign
+    - deadcode
+    - typecheck
+    - gosec
+    - megacheck
+    - misspell
+    - unparam
+    - dogsled
+    - nakedret
+    - prealloc
+    - scopelint
+    - gocritic
+    - gochecknoinits
+    - gochecknoglobals
+    - godox
+    - funlen
+    - whitespace
+    - wsl
+    - goprintffuncname
+    - gomnd
+    - goerr113
+    - gomodguard
+    - asciicheck
+    - exhaustive
+    - exportloopref
+    - gofumpt
+    - noctx
+    - nolintlint
+    - rowserrcheck
+    - errorlint
+    - sqlclosecheck
+    - tparallel
+
+  disable:
+    - dupl
+    - gocyclo
+    - lll
+    - gocognit
+    - godot
+    - nestif
+    - testpackage
+    - wrapcheck
+    - nlreturn
+    - cyclop
+    - forcetypeassert
+    - paralleltest
+
+linters-settings:
+  gofmt:
+    simplify: true
+  goimports:
+    local-prefixes: github.com/claude-flow/swarm-operator
+  golint:
+    min-confidence: 0.8
+  govet:
+    check-shadowing: true
+  errcheck:
+    check-type-assertions: true
+    check-blank: true
+  gocritic:
+    enabled-tags:
+      - performance
+      - style
+      - experimental
+    disabled-checks:
+      - whyNoLint
+  funlen:
+    lines: 100
+    statements: 50
+  gomnd:
+    settings:
+      mnd:
+        checks:
+          - argument
+          - case
+          - condition
+          - operation
+          - return
+          - assign
+  gomodguard:
+    blocked:
+      modules:
+        - github.com/pkg/errors:
+            recommendations:
+              - errors
+              - fmt
+            reason: "Use standard library errors package"
+
+issues:
+  exclude-rules:
+    # Exclude test files from some linters
+    - path: _test\.go
+      linters:
+        - gochecknoglobals
+        - gochecknoinits
+        - funlen
+        - gomnd
+        - goerr113
+
+    # Exclude generated files
+    - path: zz_generated
+      linters:
+        - all
+
+    # Exclude specific directories
+    - path: internal/test
+      linters:
+        - gochecknoglobals
+        - gochecknoinits
+
+    # Allow fmt.Print* in main packages
+    - path: cmd/
+      linters:
+        - forbidigo
+
+  max-issues-per-linter: 0
+  max-same-issues: 0
+
+output:
+  format: colored-line-number
+  print-issued-lines: true
+  print-linter-name: true

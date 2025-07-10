@@ -1,0 +1,5 @@
+## Append samples of your project ##
+resources:
+- swarm_v1alpha1_swarmcluster.yaml
+- swarm_v1alpha1_swarmtask.yaml
+#+kubebuilder:scaffold:manifestskustomizesamples

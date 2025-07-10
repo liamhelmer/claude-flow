@@ -1,0 +1,45 @@
+apiVersion: swarm.claudeflow.io/v1alpha1
+kind: SwarmCluster
+metadata:
+  name: example-hierarchical-swarm
+  namespace: default
+spec:
+  topology: hierarchical
+  maxAgents: 15
+  minAgents: 7
+  strategy: specialized
+  
+  agentTemplate:
+    capabilities:
+      - "coordination"
+      - "research"
+      - "development"
+      - "analysis"
+      - "testing"
+      - "optimization"
+    cognitivePatterns:
+      - "systems"
+      - "critical"
+      - "adaptive"
+      - "convergent"
+      - "divergent"
+    resources:
+      cpu: "200m"
+      memory: "512Mi"
+  
+  taskDistribution:
+    algorithm: priority-based
+    maxTasksPerAgent: 8
+    taskTimeout: 600
+  
+  autoScaling:
+    enabled: true
+    scaleUpThreshold: 80
+    scaleDownThreshold: 30
+    metrics:
+      - type: cpu
+        target: "75"
+      - type: memory
+        target: "80"
+      - type: task-queue
+        target: "15"

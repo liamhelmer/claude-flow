@@ -1,0 +1,46 @@
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: swarm-operator
+rules:
+# Core resources
+- apiGroups: [""]
+  resources: ["pods", "services", "configmaps", "secrets"]
+  verbs: ["create", "update", "patch", "delete", "get", "list", "watch"]
+- apiGroups: [""]
+  resources: ["events"]
+  verbs: ["create", "patch"]
+- apiGroups: [""]
+  resources: ["pods/log"]
+  verbs: ["get", "list"]
+# Batch resources for Jobs
+- apiGroups: ["batch"]
+  resources: ["jobs"]
+  verbs: ["create", "update", "patch", "delete", "get", "list", "watch"]
+# Apps resources
+- apiGroups: ["apps"]
+  resources: ["deployments", "statefulsets", "replicasets"]
+  verbs: ["create", "update", "patch", "delete", "get", "list", "watch"]
+# Swarm CRDs
+- apiGroups: ["swarm.claudeflow.io"]
+  resources: ["swarmclusters", "agents", "swarmtasks"]
+  verbs: ["create", "update", "patch", "delete", "get", "list", "watch"]
+- apiGroups: ["swarm.claudeflow.io"]
+  resources: ["swarmclusters/status", "agents/status", "swarmtasks/status"]
+  verbs: ["update", "patch", "get"]
+- apiGroups: ["swarm.claudeflow.io"]
+  resources: ["swarmclusters/scale"]
+  verbs: ["update", "patch"]
+# Coordination
+- apiGroups: ["coordination.k8s.io"]
+  resources: ["leases"]
+  verbs: ["create", "update", "patch", "delete", "get", "list", "watch"]
+# Metrics
+- apiGroups: ["metrics.k8s.io"]
+  resources: ["pods", "nodes"]
+  verbs: ["get", "list"]
+# Autoscaling
+- apiGroups: ["autoscaling"]
+  resources: ["horizontalpodautoscalers"]
+  verbs: ["create", "update", "patch", "delete", "get", "list", "watch"]

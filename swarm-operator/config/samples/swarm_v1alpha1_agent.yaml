@@ -1,0 +1,40 @@
+apiVersion: swarm.claudeflow.io/v1alpha1
+kind: Agent
+metadata:
+  labels:
+    app.kubernetes.io/name: agent
+    app.kubernetes.io/instance: agent-sample
+    app.kubernetes.io/part-of: swarm-operator
+    app.kubernetes.io/managed-by: kustomize
+    app.kubernetes.io/created-by: swarm-operator
+  name: agent-sample
+spec:
+  type: coder
+  swarmCluster: swarmcluster-sample
+  capabilities:
+    - "golang"
+    - "kubernetes"
+    - "testing"
+    - "refactoring"
+  cognitivePattern: adaptive
+  resources:
+    cpu: "250m"
+    memory: "256Mi"
+    storage: "500Mi"
+  taskAffinity:
+    - taskType: "implementation"
+      priority: 90
+      requiredCapabilities:
+        - "golang"
+    - taskType: "testing"
+      priority: 80
+      requiredCapabilities:
+        - "testing"
+    - taskType: "refactoring"
+      priority: 85
+      requiredCapabilities:
+        - "refactoring"
+  communication:
+    protocol: grpc
+    port: 8080
+    broadcastEnabled: true

@@ -1,0 +1,440 @@
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  name: agents.flow.claude.ai
+  annotations:
+    controller-gen.kubebuilder.io/version: v0.14.0
+spec:
+  group: flow.claude.ai
+  names:
+    kind: Agent
+    listKind: AgentList
+    plural: agents
+    singular: agent
+    shortNames:
+    - ag
+    categories:
+    - claude-flow
+    - ai
+  scope: Namespaced
+  versions:
+  - name: v1alpha1
+    served: true
+    storage: true
+    additionalPrinterColumns:
+    - jsonPath: .spec.type
+      name: Type
+      type: string
+    - jsonPath: .spec.swarmRef.name
+      name: Swarm
+      type: string
+    - jsonPath: .status.phase
+      name: Phase
+      type: string
+    - jsonPath: .status.currentTask
+      name: Current Task
+      type: string
+    - jsonPath: .status.health
+      name: Health
+      type: string
+    - jsonPath: .status.metrics.cpuUsage
+      name: CPU
+      type: string
+    - jsonPath: .status.metrics.memoryUsage
+      name: Memory
+      type: string
+    - jsonPath: .metadata.creationTimestamp
+      name: Age
+      type: date
+    schema:
+      openAPIV3Schema:
+        description: Agent is the Schema for the agents API
+        type: object
+        properties:
+          apiVersion:
+            description: 'APIVersion defines the versioned schema of this representation of an object.'
+            type: string
+          kind:
+            description: 'Kind is a string value representing the REST resource this object represents.'
+            type: string
+          metadata:
+            type: object
+          spec:
+            description: AgentSpec defines the desired state of Agent
+            type: object
+            required:
+            - type
+            - swarmRef
+            properties:
+              type:
+                description: Type of agent
+                type: string
+                enum:
+                - coordinator
+                - researcher
+                - coder
+                - analyst
+                - architect
+                - tester
+                - reviewer
+                - optimizer
+                - documenter
+                - monitor
+                - specialist
+              swarmRef:
+                description: Reference to the parent Swarm
+                type: object
+                required:
+                - name
+                properties:
+                  name:
+                    description: Name of the Swarm resource
+                    type: string
+                  namespace:
+                    description: Namespace of the Swarm (defaults to agent's namespace)
+                    type: string
+              capabilities:
+                description: Agent capabilities and specializations
+                type: array
+                items:
+                  type: string
+              cognitivePattern:
+                description: Cognitive thinking pattern
+                type: string
+                enum:
+                - convergent
+                - divergent
+                - lateral
+                - systems
+                - critical
+                - adaptive
+                default: adaptive
+              learningConfig:
+                description: Learning and adaptation configuration
+                type: object
+                properties:
+                  enabled:
+                    description: Enable learning capabilities
+                    type: boolean
+                    default: true
+                  learningRate:
+                    description: Learning rate (0-1)
+                    type: number
+                    minimum: 0
+                    maximum: 1
+                    default: 0.1
+                  memoryRetention:
+                    description: Memory retention period
+                    type: string
+                    pattern: '^[0-9]+[smhd]$'
+                    default: "7d"
+                  adaptationThreshold:
+                    description: Performance threshold for adaptation
+                    type: number
+                    minimum: 0
+                    maximum: 1
+                    default: 0.7
+              resources:
+                description: Resource requirements
+                type: object
+                properties:
+                  memory:
+                    description: Memory limit
+                    type: string
+                    pattern: '^[0-9]+[KMGT]i$'
+                    default: "512Mi"
+                  cpu:
+                    description: CPU limit
+                    type: string
+                    pattern: '^[0-9]+m?$'
+                    default: "500m"
+                  gpu:
+                    description: GPU requirements
+                    type: object
+                    properties:
+                      enabled:
+                        type: boolean
+                        default: false
+                      count:
+                        type: integer
+                        minimum: 0
+                        default: 0
+                      type:
+                        type: string
+              neuralConfig:
+                description: Neural network configuration
+                type: object
+                properties:
+                  modelType:
+                    description: Neural model type
+                    type: string
+                    enum:
+                    - transformer
+                    - lstm
+                    - gru
+                    - cnn
+                    - hybrid
+                    default: transformer
+                  layers:
+                    description: Number of neural layers
+                    type: integer
+                    minimum: 1
+                    maximum: 100
+                    default: 12
+                  hiddenSize:
+                    description: Hidden layer size
+                    type: integer
+                    minimum: 64
+                    maximum: 4096
+                    default: 768
+                  attentionHeads:
+                    description: Number of attention heads
+                    type: integer
+                    minimum: 1
+                    maximum: 64
+                    default: 12
+                  quantization:
+                    description: Enable model quantization
+                    type: boolean
+                    default: false
+              communication:
+                description: Communication endpoints and settings
+                type: object
+                properties:
+                  endpoint:
+                    description: Primary communication endpoint
+                    type: string
+                  port:
+                    description: Communication port
+                    type: integer
+                    minimum: 1024
+                    maximum: 65535
+                    default: 50051
+                  protocol:
+                    description: Communication protocol
+                    type: string
+                    enum:
+                    - grpc
+                    - http
+                    - websocket
+                    default: grpc
+                  peers:
+                    description: Direct peer connections
+                    type: array
+                    items:
+                      type: object
+                      required:
+                      - name
+                      properties:
+                        name:
+                          description: Peer agent name
+                          type: string
+                        priority:
+                          description: Connection priority
+                          type: integer
+                          minimum: 0
+                          maximum: 10
+                          default: 5
+              priority:
+                description: Agent priority for task assignment
+                type: integer
+                minimum: 0
+                maximum: 10
+                default: 5
+              persistence:
+                description: State persistence configuration
+                type: object
+                properties:
+                  enabled:
+                    description: Enable state persistence
+                    type: boolean
+                    default: true
+                  checkpointInterval:
+                    description: Checkpoint interval
+                    type: string
+                    pattern: '^[0-9]+[smh]$'
+                    default: "5m"
+                  storageClass:
+                    description: Storage class for persistent volumes
+                    type: string
+              security:
+                description: Security configuration
+                type: object
+                properties:
+                  encryption:
+                    description: Enable end-to-end encryption
+                    type: boolean
+                    default: true
+                  authentication:
+                    description: Authentication method
+                    type: string
+                    enum:
+                    - none
+                    - token
+                    - mtls
+                    - oauth
+                    default: token
+                  rbac:
+                    description: RBAC settings
+                    type: object
+                    properties:
+                      enabled:
+                        type: boolean
+                        default: true
+                      role:
+                        type: string
+                      serviceAccount:
+                        type: string
+          status:
+            description: AgentStatus defines the observed state of Agent
+            type: object
+            properties:
+              phase:
+                description: Current phase of the agent
+                type: string
+                enum:
+                - Initializing
+                - Ready
+                - Busy
+                - Learning
+                - Adapting
+                - Terminating
+                - Failed
+              health:
+                description: Health status
+                type: string
+                enum:
+                - Healthy
+                - Degraded
+                - Unhealthy
+              currentTask:
+                description: Currently assigned task ID
+                type: string
+              completedTasks:
+                description: Number of completed tasks
+                type: integer
+              failedTasks:
+                description: Number of failed tasks
+                type: integer
+              successRate:
+                description: Task success rate percentage
+                type: string
+              lastTaskCompletion:
+                description: Timestamp of last task completion
+                type: string
+                format: date-time
+              metrics:
+                description: Performance metrics
+                type: object
+                properties:
+                  cpuUsage:
+                    description: Current CPU usage
+                    type: string
+                  memoryUsage:
+                    description: Current memory usage
+                    type: string
+                  throughput:
+                    description: Task throughput (tasks/hour)
+                    type: number
+                  avgResponseTime:
+                    description: Average response time
+                    type: string
+                  tokenUsage:
+                    description: Total tokens used
+                    type: integer
+                  errorRate:
+                    description: Error rate percentage
+                    type: string
+              neural:
+                description: Neural network status
+                type: object
+                properties:
+                  modelLoaded:
+                    description: Whether neural model is loaded
+                    type: boolean
+                  accuracy:
+                    description: Current model accuracy
+                    type: number
+                  lastTraining:
+                    description: Last training timestamp
+                    type: string
+                    format: date-time
+                  trainingIterations:
+                    description: Total training iterations
+                    type: integer
+                  patterns:
+                    description: Recognized patterns count
+                    type: integer
+              communication:
+                description: Communication status
+                type: object
+                properties:
+                  endpoint:
+                    description: Active endpoint
+                    type: string
+                  connectedPeers:
+                    description: Number of connected peers
+                    type: integer
+                  messagesSent:
+                    description: Total messages sent
+                    type: integer
+                  messagesReceived:
+                    description: Total messages received
+                    type: integer
+                  avgLatency:
+                    description: Average communication latency
+                    type: string
+              learning:
+                description: Learning status
+                type: object
+                properties:
+                  knowledgeItems:
+                    description: Number of stored knowledge items
+                    type: integer
+                  adaptations:
+                    description: Number of adaptations made
+                    type: integer
+                  performanceScore:
+                    description: Current performance score (0-1)
+                    type: number
+                  lastAdaptation:
+                    description: Last adaptation timestamp
+                    type: string
+                    format: date-time
+              conditions:
+                description: Current service state of agent
+                type: array
+                items:
+                  type: object
+                  required:
+                  - type
+                  - status
+                  - lastTransitionTime
+                  properties:
+                    type:
+                      description: Type of condition
+                      type: string
+                    status:
+                      description: Status of the condition
+                      type: string
+                    lastTransitionTime:
+                      description: Last time the condition transitioned
+                      type: string
+                      format: date-time
+                    reason:
+                      description: Unique, one-word, CamelCase reason
+                      type: string
+                    message:
+                      description: Human-readable message
+                      type: string
+              observedGeneration:
+                description: The generation observed by the controller
+                type: integer
+    subresources:
+      status: {}
+  - name: v1beta1
+    served: false
+    storage: false
+    schema:
+      openAPIV3Schema:
+        type: object

@@ -1,0 +1,386 @@
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  name: swarms.flow.claude.ai
+  annotations:
+    controller-gen.kubebuilder.io/version: v0.14.0
+spec:
+  group: flow.claude.ai
+  names:
+    kind: Swarm
+    listKind: SwarmList
+    plural: swarms
+    singular: swarm
+    shortNames:
+    - sw
+    categories:
+    - claude-flow
+    - ai
+  scope: Namespaced
+  versions:
+  - name: v1alpha1
+    served: true
+    storage: true
+    additionalPrinterColumns:
+    - jsonPath: .spec.topology
+      name: Topology
+      type: string
+    - jsonPath: .spec.maxAgents
+      name: Max Agents
+      type: integer
+    - jsonPath: .status.activeAgents
+      name: Active
+      type: integer
+    - jsonPath: .status.phase
+      name: Phase
+      type: string
+    - jsonPath: .status.health
+      name: Health
+      type: string
+    - jsonPath: .metadata.creationTimestamp
+      name: Age
+      type: date
+    schema:
+      openAPIV3Schema:
+        description: Swarm is the Schema for the swarms API
+        type: object
+        properties:
+          apiVersion:
+            description: 'APIVersion defines the versioned schema of this representation of an object.'
+            type: string
+          kind:
+            description: 'Kind is a string value representing the REST resource this object represents.'
+            type: string
+          metadata:
+            type: object
+          spec:
+            description: SwarmSpec defines the desired state of Swarm
+            type: object
+            required:
+            - topology
+            properties:
+              topology:
+                description: Topology defines the swarm communication pattern
+                type: string
+                enum:
+                - mesh
+                - hierarchical
+                - ring
+                - star
+              maxAgents:
+                description: MaxAgents is the maximum number of agents in the swarm
+                type: integer
+                minimum: 1
+                maximum: 100
+                default: 8
+              minAgents:
+                description: MinAgents is the minimum number of agents to maintain
+                type: integer
+                minimum: 1
+                default: 1
+              strategy:
+                description: Strategy defines the task execution strategy
+                type: string
+                enum:
+                - parallel
+                - sequential
+                - adaptive
+                - balanced
+                default: adaptive
+              agentSpecs:
+                description: AgentSpecs defines specifications for different agent types
+                type: array
+                items:
+                  type: object
+                  required:
+                  - type
+                  - replicas
+                  properties:
+                    type:
+                      description: Agent type (researcher, coder, analyst, etc.)
+                      type: string
+                      enum:
+                      - coordinator
+                      - researcher
+                      - coder
+                      - analyst
+                      - architect
+                      - tester
+                      - reviewer
+                      - optimizer
+                      - documenter
+                      - monitor
+                      - specialist
+                    replicas:
+                      description: Number of agents of this type
+                      type: integer
+                      minimum: 0
+                      maximum: 20
+                    capabilities:
+                      description: Additional capabilities for this agent type
+                      type: array
+                      items:
+                        type: string
+                    resources:
+                      description: Resource requirements for this agent type
+                      type: object
+                      properties:
+                        memory:
+                          description: Memory limit (e.g., "512Mi", "2Gi")
+                          type: string
+                          pattern: '^[0-9]+[KMGT]i$'
+                        cpu:
+                          description: CPU limit (e.g., "100m", "2")
+                          type: string
+                          pattern: '^[0-9]+m?$'
+                        gpu:
+                          description: GPU requirements
+                          type: object
+                          properties:
+                            enabled:
+                              type: boolean
+                            count:
+                              type: integer
+                              minimum: 0
+                            type:
+                              type: string
+              performance:
+                description: Performance configuration
+                type: object
+                properties:
+                  enableWASM:
+                    description: Enable WASM acceleration
+                    type: boolean
+                    default: true
+                  enableSIMD:
+                    description: Enable SIMD optimizations
+                    type: boolean
+                    default: true
+                  neuralAcceleration:
+                    description: Enable neural network acceleration
+                    type: boolean
+                    default: true
+                  cacheSize:
+                    description: Coordination cache size
+                    type: string
+                    pattern: '^[0-9]+[KMGT]i$'
+                    default: "256Mi"
+              memory:
+                description: Memory persistence configuration
+                type: object
+                properties:
+                  enabled:
+                    description: Enable persistent memory
+                    type: boolean
+                    default: true
+                  backend:
+                    description: Memory backend type
+                    type: string
+                    enum:
+                    - inmemory
+                    - redis
+                    - etcd
+                    - persistent-volume
+                    default: inmemory
+                  ttl:
+                    description: Time to live for memory entries
+                    type: string
+                    pattern: '^[0-9]+[smhd]$'
+                    default: "24h"
+                  encryption:
+                    description: Enable memory encryption
+                    type: boolean
+                    default: false
+              communication:
+                description: Inter-agent communication settings
+                type: object
+                properties:
+                  protocol:
+                    description: Communication protocol
+                    type: string
+                    enum:
+                    - grpc
+                    - http
+                    - websocket
+                    default: grpc
+                  encryption:
+                    description: Enable encrypted communication
+                    type: boolean
+                    default: true
+                  compression:
+                    description: Enable message compression
+                    type: boolean
+                    default: true
+                  timeout:
+                    description: Communication timeout
+                    type: string
+                    pattern: '^[0-9]+[smh]$'
+                    default: "30s"
+              scaling:
+                description: Auto-scaling configuration
+                type: object
+                properties:
+                  enabled:
+                    description: Enable auto-scaling
+                    type: boolean
+                    default: true
+                  metrics:
+                    description: Scaling metrics
+                    type: array
+                    items:
+                      type: object
+                      required:
+                      - type
+                      - threshold
+                      properties:
+                        type:
+                          type: string
+                          enum:
+                          - cpu
+                          - memory
+                          - taskQueue
+                          - responseTime
+                        threshold:
+                          type: integer
+                          minimum: 1
+                          maximum: 100
+                        scaleUp:
+                          type: integer
+                          default: 1
+                        scaleDown:
+                          type: integer
+                          default: 1
+                  cooldownPeriod:
+                    description: Cooldown between scaling operations
+                    type: string
+                    pattern: '^[0-9]+[smh]$'
+                    default: "60s"
+              monitoring:
+                description: Monitoring and observability configuration
+                type: object
+                properties:
+                  prometheus:
+                    description: Enable Prometheus metrics
+                    type: boolean
+                    default: true
+                  openTelemetry:
+                    description: Enable OpenTelemetry tracing
+                    type: boolean
+                    default: true
+                  logLevel:
+                    description: Logging level
+                    type: string
+                    enum:
+                    - debug
+                    - info
+                    - warn
+                    - error
+                    default: info
+          status:
+            description: SwarmStatus defines the observed state of Swarm
+            type: object
+            properties:
+              phase:
+                description: Current phase of the swarm
+                type: string
+                enum:
+                - Initializing
+                - Ready
+                - Scaling
+                - Updating
+                - Terminating
+                - Failed
+              health:
+                description: Overall health status
+                type: string
+                enum:
+                - Healthy
+                - Degraded
+                - Unhealthy
+              activeAgents:
+                description: Number of currently active agents
+                type: integer
+              totalAgents:
+                description: Total number of agents (including pending)
+                type: integer
+              agentStatus:
+                description: Status breakdown by agent type
+                type: array
+                items:
+                  type: object
+                  properties:
+                    type:
+                      type: string
+                    active:
+                      type: integer
+                    pending:
+                      type: integer
+                    failed:
+                      type: integer
+                    ready:
+                      type: integer
+              topology:
+                description: Current topology information
+                type: object
+                properties:
+                  type:
+                    type: string
+                  connections:
+                    type: integer
+                  avgLatency:
+                    type: string
+                  throughput:
+                    type: string
+              performance:
+                description: Performance metrics
+                type: object
+                properties:
+                  taskCompletionRate:
+                    type: string
+                  avgResponseTime:
+                    type: string
+                  successRate:
+                    type: string
+                  tokenUsage:
+                    type: integer
+                  cpuUsage:
+                    type: string
+                  memoryUsage:
+                    type: string
+              lastTaskID:
+                description: ID of the last orchestrated task
+                type: string
+              conditions:
+                description: Current service state of swarm
+                type: array
+                items:
+                  type: object
+                  required:
+                  - type
+                  - status
+                  - lastTransitionTime
+                  properties:
+                    type:
+                      description: Type of condition
+                      type: string
+                    status:
+                      description: Status of the condition (True, False, Unknown)
+                      type: string
+                    lastTransitionTime:
+                      description: Last time the condition transitioned
+                      type: string
+                      format: date-time
+                    reason:
+                      description: Unique, one-word, CamelCase reason
+                      type: string
+                    message:
+                      description: Human-readable message
+                      type: string
+              observedGeneration:
+                description: The generation observed by the controller
+                type: integer
+    subresources:
+      status: {}
+      scale:
+        specReplicasPath: .spec.maxAgents
+        statusReplicasPath: .status.activeAgents

@@ -1,0 +1,41 @@
+apiVersion: swarm.claudeflow.io/v1alpha1
+kind: SwarmCluster
+metadata:
+  labels:
+    app.kubernetes.io/name: swarmcluster
+    app.kubernetes.io/instance: swarmcluster-sample
+    app.kubernetes.io/part-of: swarm-operator
+    app.kubernetes.io/managed-by: kustomize
+    app.kubernetes.io/created-by: swarm-operator
+  name: swarmcluster-sample
+spec:
+  topology: mesh
+  maxAgents: 10
+  minAgents: 3
+  strategy: balanced
+  agentTemplate:
+    capabilities:
+      - "code-analysis"
+      - "testing"
+      - "documentation"
+    cognitivePatterns:
+      - "convergent"
+      - "divergent"
+      - "adaptive"
+    resources:
+      cpu: "500m"
+      memory: "512Mi"
+      storage: "1Gi"
+  taskDistribution:
+    algorithm: capability-based
+    maxTasksPerAgent: 5
+    taskTimeout: 600
+  autoScaling:
+    enabled: true
+    metrics:
+      - type: cpu
+        target: "70"
+      - type: task-queue
+        target: "10"
+    scaleUpThreshold: 80
+    scaleDownThreshold: 20

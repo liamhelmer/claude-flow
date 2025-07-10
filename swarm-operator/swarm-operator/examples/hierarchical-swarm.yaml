@@ -1,0 +1,246 @@
+# Hierarchical Swarm Example
+# This creates a complex hierarchical topology with coordinators and workers
+apiVersion: swarm.cloudflow.io/v1alpha1
+kind: Swarm
+metadata:
+  name: hierarchical-swarm
+  namespace: default
+  labels:
+    app: example
+    environment: production
+spec:
+  # Hierarchical topology - coordinators manage groups of worker agents
+  topology: hierarchical
+  
+  # Maximum number of agents (including coordinators)
+  maxAgents: 12
+  
+  # Strategy for specialized agent roles
+  strategy: specialized
+  
+  # Coordinator configuration
+  coordinatorConfig:
+    # Number of coordinator replicas
+    replicas: 2
+    
+    # Coordinator-specific resources
+    resources:
+      requests:
+        cpu: "500m"
+        memory: "512Mi"
+      limits:
+        cpu: "1000m"
+        memory: "1Gi"
+    
+    # Coordinator capabilities
+    capabilities:
+      - task-distribution
+      - monitoring
+      - aggregation
+      - decision-making
+    
+    # Load balancing between coordinators
+    loadBalancerConfig:
+      algorithm: round-robin
+      sessionAffinity: true
+      sessionAffinityTimeout: 1800s
+  
+  # Worker agent configuration
+  agentTemplate:
+    metadata:
+      labels:
+        swarm-type: hierarchical
+        role: worker
+    spec:
+      # Worker capabilities
+      capabilities:
+        - compute
+        - data-processing
+        - ml-inference
+        - storage-access
+      
+      # Resources for worker agents
+      resources:
+        requests:
+          cpu: "200m"
+          memory: "256Mi"
+        limits:
+          cpu: "500m"
+          memory: "512Mi"
+      
+      # Environment configuration
+      env:
+        - name: WORKER_TYPE
+          value: "compute"
+        - name: MAX_CONCURRENT_TASKS
+          value: "3"
+        - name: ENABLE_METRICS
+          value: "true"
+  
+  # Hierarchy configuration
+  hierarchyLevels:
+    - name: coordinators
+      role: coordinator
+      maxNodes: 2
+      childrenPerNode: 5
+    - name: workers
+      role: worker
+      maxNodes: 10
+      childrenPerNode: 0
+  
+  # Communication patterns
+  communicationConfig:
+    # How agents communicate
+    mode: bidirectional
+    # Message queue configuration
+    messageQueue:
+      maxSize: 1000
+      ttl: 300s
+    # Retry configuration
+    retry:
+      maxAttempts: 3
+      backoffMultiplier: 2
+      initialBackoff: 1s
+  
+  # Advanced features
+  features:
+    # Enable dynamic topology adjustments
+    dynamicTopology: true
+    # Enable agent migration between coordinators
+    agentMigration: true
+    # Enable automatic failover
+    autoFailover: true
+    # Enable performance optimization
+    performanceOptimization: true
+  
+  # Monitoring configuration
+  monitoring:
+    enabled: true
+    metricsPort: 9090
+    # Metrics to collect
+    metrics:
+      - agent-utilization
+      - task-throughput
+      - communication-latency
+      - error-rate
+  
+  # Persistence configuration
+  persistence:
+    enabled: true
+    storageClass: standard
+    size: 10Gi
+
+---
+# Complex Task Example for Hierarchical Swarm
+apiVersion: swarm.cloudflow.io/v1alpha1
+kind: Task
+metadata:
+  name: distributed-ml-training
+  namespace: default
+spec:
+  # Reference to the hierarchical swarm
+  swarmRef:
+    name: hierarchical-swarm
+  
+  # Task description
+  description: "Distributed machine learning model training with data parallelism"
+  
+  # High priority for production workload
+  priority: critical
+  
+  # Adaptive strategy for optimal performance
+  strategy: adaptive
+  
+  # Use most of the swarm for this task
+  maxAgents: 8
+  
+  # Longer timeout for ML training
+  timeout: 3600s
+  
+  # Multi-stage task configuration
+  stages:
+    - name: data-preparation
+      description: "Load and preprocess training data"
+      agentTypes: ["worker"]
+      maxAgents: 4
+      timeout: 600s
+      
+    - name: model-training
+      description: "Distributed training across workers"
+      agentTypes: ["worker"]
+      maxAgents: 8
+      timeout: 2400s
+      dependencies: ["data-preparation"]
+      
+    - name: model-validation
+      description: "Validate trained model"
+      agentTypes: ["worker"]
+      maxAgents: 2
+      timeout: 300s
+      dependencies: ["model-training"]
+      
+    - name: result-aggregation
+      description: "Aggregate results from all workers"
+      agentTypes: ["coordinator"]
+      maxAgents: 1
+      timeout: 300s
+      dependencies: ["model-validation"]
+  
+  # Resource requirements for the task
+  resources:
+    requests:
+      cpu: "4000m"
+      memory: "8Gi"
+    limits:
+      cpu: "8000m"
+      memory: "16Gi"
+  
+  # Task-specific configuration
+  config:
+    # ML training parameters
+    training:
+      epochs: 100
+      batchSize: 64
+      learningRate: 0.001
+      optimizer: adam
+    
+    # Data configuration
+    data:
+      dataset: "imagenet-subset"
+      splitRatio: "80:10:10"
+      augmentation: true
+    
+    # Checkpointing
+    checkpoint:
+      enabled: true
+      interval: 10
+      path: "/data/checkpoints"
+  
+  # Success criteria
+  successCriteria:
+    - metric: accuracy
+      operator: GreaterThan
+      value: 0.95
+    - metric: loss
+      operator: LessThan  
+      value: 0.05
+
+---
+# Service for exposing swarm metrics
+apiVersion: v1
+kind: Service
+metadata:
+  name: hierarchical-swarm-metrics
+  namespace: default
+  labels:
+    swarm: hierarchical-swarm
+spec:
+  selector:
+    swarm: hierarchical-swarm
+    role: coordinator
+  ports:
+    - name: metrics
+      port: 9090
+      targetPort: 9090
+      protocol: TCP
+  type: ClusterIP

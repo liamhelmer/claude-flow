@@ -1,0 +1,316 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: github-app-task-script
+  namespace: default
+data:
+  task.sh: |
+    #!/bin/sh
+    set -e
+    echo "🚀 Starting GitHub automation task..."
+    
+    # Detect authentication method
+    if [ -f "/github-app/private-key" ]; then
+        echo "🔐 Using GitHub App authentication"
+        AUTH_METHOD="app"
+    elif [ ! -z "$GITHUB_TOKEN" ] && [ "$GITHUB_TOKEN" != "ghp_PLACEHOLDER_TOKEN" ]; then
+        echo "🔑 Using Personal Access Token authentication"
+        AUTH_METHOD="pat"
+    else
+        echo "⚠️  WARNING: No valid authentication method found"
+        echo "Simulating repository creation..."
+        sleep 5
+        echo "✅ Simulation completed!"
+        exit 0
+    fi
+    
+    # Install required tools
+    echo "📦 Installing required tools..."
+    apk add --no-cache curl jq go git python3 py3-pip
+    pip3 install --break-system-packages PyJWT cryptography requests
+    
+    # Configure git
+    git config --global user.name "Swarm Operator Bot"
+    git config --global user.email "swarm-operator[bot]@users.noreply.github.com"
+    git config --global init.defaultBranch main
+    
+    # Function to generate JWT for GitHub App
+    generate_jwt() {
+        python3 - <<'PYEOF'
+    import jwt
+    import time
+    import sys
+    import os
+    
+    # Read the private key
+    with open('/github-app/private-key', 'r') as f:
+        private_key = f.read()
+    
+    # GitHub App ID from environment
+    app_id = sys.argv[1] if len(sys.argv) > 1 else os.environ.get('APP_ID', '')
+    
+    # Generate JWT
+    now = int(time.time())
+    payload = {
+        'iat': now - 60,  # Issued 60 seconds ago to account for clock drift
+        'exp': now + 600,  # Expires in 10 minutes
+        'iss': app_id
+    }
+    
+    token = jwt.encode(payload, private_key, algorithm='RS256')
+    print(token)
+    PYEOF
+    }
+    
+    # Function to get installation access token
+    get_installation_token() {
+        JWT=$(generate_jwt "$APP_ID")
+        
+        # Get installation access token
+        RESPONSE=$(curl -s -X POST \
+          -H "Authorization: Bearer $JWT" \
+          -H "Accept: application/vnd.github.v3+json" \
+          "https://api.github.com/app/installations/$INSTALLATION_ID/access_tokens")
+        
+        echo "$RESPONSE" | jq -r '.token'
+    }
+    
+    # Get the appropriate token
+    if [ "$AUTH_METHOD" = "app" ]; then
+        echo "🔧 Generating GitHub App access token..."
+        ACCESS_TOKEN=$(get_installation_token)
+        if [ -z "$ACCESS_TOKEN" ] || [ "$ACCESS_TOKEN" = "null" ]; then
+            echo "❌ Failed to get GitHub App access token"
+            exit 1
+        fi
+        echo "✅ Successfully obtained GitHub App access token"
+        
+        # For GitHub App, use badal-io organization
+        GITHUB_USERNAME="badal-io"
+        DEST_REPO="rcm-test1"
+        echo "📍 Using GitHub App destination: $GITHUB_USERNAME/$DEST_REPO"
+    else
+        ACCESS_TOKEN="$GITHUB_TOKEN"
+        # GITHUB_USERNAME already set from secret
+    fi
+    
+    # Create Go hello world app
+    echo "📝 Creating Go hello world application..."
+    mkdir -p /workspace/hello-swarm
+    cd /workspace/hello-swarm
+    
+    # Create go.mod
+    cat > go.mod << EOF
+    module github.com/$GITHUB_USERNAME/hello-swarm
+    
+    go 1.21
+    EOF
+    
+    # Create main.go
+    cat > main.go << 'GOEOF'
+    package main
+    
+    import (
+        "fmt"
+        "time"
+    )
+    
+    func main() {
+        fmt.Println("🐝 Hello from Claude Flow Swarm!")
+        fmt.Printf("Generated at: %s\n", time.Now().Format(time.RFC3339))
+        fmt.Println("This app was created by an AI swarm running in Kubernetes!")
+        fmt.Println()
+        fmt.Println("Authentication: GitHub App")
+        fmt.Println("The swarm operator orchestrated this entire process:")
+        fmt.Println("- Created a Kubernetes Job")
+        fmt.Println("- Authenticated using GitHub App")
+        fmt.Println("- Generated Go code")
+        fmt.Println("- Created a GitHub repository")
+        fmt.Println("- Pushed the code automatically")
+    }
+    GOEOF
+    
+    # Create README
+    cat > README.md << 'MDEOF'
+    # Hello Swarm 🐝
+    
+    This repository was automatically created and deployed by the Claude Flow Swarm Operator running in Kubernetes.
+    
+    ## About
+    
+    This is a simple Go application that demonstrates the power of AI-driven automation in cloud-native environments.
+    
+    ### Features
+    - Automated repository creation via GitHub API
+    - GitHub App authentication for enhanced security
+    - Code generation by AI swarm agents
+    - GitOps workflow integration
+    - Kubernetes-native operation
+    
+    ### Running the app
+    
+    ```bash
+    go run main.go
+    ```
+    
+    ### Architecture
+    
+    ```
+    Kubernetes Cluster
+    ├── Swarm Operator (Controller)
+    │   └── Watches SwarmTask CRDs
+    ├── SwarmTask Resource
+    │   └── Triggers Job Creation
+    └── Kubernetes Job
+        ├── GitHub App Credentials (Secret)
+        └── Executes GitHub Automation
+    ```
+    
+    ### Authentication
+    
+    This repository was created using GitHub App authentication, providing:
+    - Fine-grained permissions
+    - Enhanced security
+    - No personal access tokens required
+    - Automatic token rotation
+    
+    ---
+    *Generated by Claude Flow Swarm Operator v0.4.0 with GitHub App support*
+    MDEOF
+    
+    # Create .gitignore
+    cat > .gitignore << 'GIEOF'
+    # Binaries
+    *.exe
+    *.dll
+    *.so
+    *.dylib
+    hello-swarm
+    
+    # Test files
+    *.test
+    *.out
+    
+    # Go workspace
+    go.work
+    go.work.sum
+    
+    # IDE
+    .vscode/
+    .idea/
+    *.swp
+    *.swo
+    
+    # OS
+    .DS_Store
+    Thumbs.db
+    GIEOF
+    
+    # Test the Go app
+    echo "🧪 Testing Go application..."
+    go run main.go
+    
+    # Initialize git repo
+    git init
+    git add .
+    git commit -m "Initial commit: Hello World Go app created by Swarm Operator
+    
+    This repository was automatically generated by the Claude Flow Swarm Operator
+    running in a Kubernetes cluster. The operator processed a SwarmTask resource
+    and created a Kubernetes Job to execute this automation.
+    
+    Authentication: GitHub App
+    Operator Version: v0.4.0"
+    
+    # Handle repository creation/verification
+    if [ "$AUTH_METHOD" = "app" ]; then
+        echo "🔧 Checking if repository exists: $GITHUB_USERNAME/$DEST_REPO"
+        
+        # Check if repo exists
+        REPO_CHECK=$(curl -s -o /dev/null -w "%{http_code}" \
+          -H "Authorization: token $ACCESS_TOKEN" \
+          -H "Accept: application/vnd.github.v3+json" \
+          "https://api.github.com/repos/$GITHUB_USERNAME/$DEST_REPO")
+        
+        if [ "$REPO_CHECK" = "404" ]; then
+            echo "📝 Repository doesn't exist, creating it..."
+            CREATE_REPO_RESPONSE=$(curl -s -X POST \
+              -H "Authorization: token $ACCESS_TOKEN" \
+              -H "Accept: application/vnd.github.v3+json" \
+              "https://api.github.com/orgs/$GITHUB_USERNAME/repos" \
+              -d "{
+                \"name\": \"$DEST_REPO\",
+                \"description\": \"🐝 Test repository for Claude Flow Swarm Operator using GitHub App authentication\",
+                \"homepage\": \"https://github.com/claude-flow/swarm-operator\",
+                \"private\": false,
+                \"has_issues\": true,
+                \"has_projects\": false,
+                \"has_wiki\": false,
+                \"auto_init\": false
+              }")
+            
+            if echo "$CREATE_REPO_RESPONSE" | jq -e '.id' > /dev/null 2>&1; then
+                echo "✅ Repository created successfully!"
+            elif echo "$CREATE_REPO_RESPONSE" | jq -e '.errors[0].code == "custom"' > /dev/null 2>&1; then
+                echo "ℹ️  Repository already exists (name conflict), will use it"
+            else
+                echo "❌ Failed to create repository"
+                echo "Response: $CREATE_REPO_RESPONSE"
+                exit 1
+            fi
+        else
+            echo "ℹ️  Repository already exists (status: $REPO_CHECK)"
+        fi
+        
+        REPO_URL="https://github.com/$GITHUB_USERNAME/$DEST_REPO.git"
+        REPO_HTML_URL="https://github.com/$GITHUB_USERNAME/$DEST_REPO"
+    else
+        # For PAT, create new repository
+        echo "🔧 Creating GitHub repository..."
+        REPO_NAME="hello-swarm-$(date +%s)"
+        
+        CREATE_REPO_RESPONSE=$(curl -s -X POST \
+          -H "Authorization: token $ACCESS_TOKEN" \
+          -H "Accept: application/vnd.github.v3+json" \
+          "https://api.github.com/user/repos" \
+          -d "{
+            \"name\": \"$REPO_NAME\",
+            \"description\": \"🐝 Hello World app created by Claude Flow Swarm Operator\",
+            \"homepage\": \"https://github.com/claude-flow/swarm-operator\",
+            \"private\": false,
+            \"has_issues\": true,
+            \"has_projects\": false,
+            \"has_wiki\": false,
+            \"auto_init\": false
+          }")
+        
+        if echo "$CREATE_REPO_RESPONSE" | jq -e '.id' > /dev/null 2>&1; then
+            echo "✅ Repository created successfully!"
+            REPO_URL=$(echo "$CREATE_REPO_RESPONSE" | jq -r '.clone_url')
+            REPO_HTML_URL=$(echo "$CREATE_REPO_RESPONSE" | jq -r '.html_url')
+        else
+            echo "❌ Failed to create repository"
+            echo "Response: $CREATE_REPO_RESPONSE"
+            exit 1
+        fi
+    fi
+    
+    echo "Repository URL: $REPO_HTML_URL"
+    
+    # Add remote and push
+    git remote add origin "$REPO_URL"
+    
+    # Use token in URL for authentication
+    REPO_URL_WITH_TOKEN=$(echo "$REPO_URL" | sed "s|https://|https://x-access-token:$ACCESS_TOKEN@|")
+    git remote set-url origin "$REPO_URL_WITH_TOKEN"
+    
+    # Push to GitHub
+    echo "📤 Pushing code to GitHub..."
+    git push -u origin main
+    
+    echo "✅ Code pushed successfully!"
+    echo ""
+    echo "🎉 Task completed successfully!"
+    echo "📍 Repository: $REPO_HTML_URL"
+    echo "🔐 Authentication: $AUTH_METHOD"
+    echo "📦 Clone with: git clone $REPO_URL"

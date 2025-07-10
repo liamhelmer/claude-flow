@@ -1,0 +1,54 @@
+apiVersion: swarm.claudeflow.io/v1alpha1
+kind: SwarmTask
+metadata:
+  name: test-cloud-tools
+  namespace: default
+spec:
+  task: |
+    #!/bin/bash
+    echo "🐝 Testing Enhanced Swarm Executor"
+    
+    echo "📦 Checking installed tools:"
+    echo -n "kubectl: " && kubectl version --client --short 2>/dev/null || echo "not found"
+    echo -n "terraform: " && terraform version | head -1 || echo "not found"
+    echo -n "gcloud: " && gcloud version | head -1 || echo "not found"
+    echo -n "aws: " && aws --version || echo "not found"
+    echo -n "docker: " && docker --version || echo "not found"
+    echo -n "helm: " && helm version --short || echo "not found"
+    echo -n "go: " && go version || echo "not found"
+    echo -n "python: " && python3 --version || echo "not found"
+    echo -n "node: " && node --version || echo "not found"
+    
+    echo ""
+    echo "📁 Checking directories:"
+    ls -la /workspace
+    ls -la /swarm-state
+    ls -la /scripts 2>/dev/null || echo "/scripts not found"
+    
+    echo ""
+    echo "💾 Testing checkpoint functionality:"
+    if [ -f "/scripts/checkpoint.sh" ]; then
+      /scripts/checkpoint.sh save "test-step" '{"status": "testing"}'
+      /scripts/checkpoint.sh load
+    else
+      echo "Checkpoint script not found, using fallback"
+      echo '{"step": "test", "status": "ok"}' > /swarm-state/checkpoint.json
+    fi
+    
+    echo ""
+    echo "✅ Basic test complete!"
+  executorImage: alpine/git:latest
+  persistentVolumes:
+  - name: workspace
+    mountPath: /workspace
+    size: 1Gi
+  - name: state
+    mountPath: /swarm-state
+    size: 1Gi
+  resources:
+    requests:
+      cpu: "100m"
+      memory: "128Mi"
+    limits:
+      cpu: "500m"
+      memory: "512Mi"

@@ -1,0 +1,317 @@
+# Task Workflow Example
+# This demonstrates complex task orchestration with dependencies and stages
+apiVersion: swarm.cloudflow.io/v1alpha1
+kind: Task
+metadata:
+  name: data-pipeline-workflow
+  namespace: default
+  labels:
+    app: example
+    workflow: data-pipeline
+spec:
+  # Reference to an existing swarm
+  swarmRef:
+    name: hierarchical-swarm
+    # Optional: reference swarm in different namespace
+    # namespace: other-namespace
+  
+  # Detailed task description
+  description: |
+    Complex data processing pipeline that:
+    1. Ingests data from multiple sources
+    2. Performs ETL operations
+    3. Runs analytics and ML models
+    4. Generates reports and visualizations
+  
+  # Task priority affects scheduling
+  priority: critical
+  
+  # Execution strategy
+  strategy: adaptive
+  
+  # Resource allocation
+  maxAgents: 10
+  
+  # Overall task timeout
+  timeout: 7200s  # 2 hours
+  
+  # Task stages with dependencies
+  stages:
+    # Stage 1: Data Ingestion
+    - name: data-ingestion
+      description: "Ingest data from multiple sources in parallel"
+      agentTypes: ["worker"]
+      maxAgents: 4
+      timeout: 600s
+      parallel: true
+      tasks:
+        - name: ingest-database
+          description: "Extract data from PostgreSQL"
+          config:
+            source: "postgresql://db.example.com/production"
+            query: "SELECT * FROM transactions WHERE date >= '2024-01-01'"
+        - name: ingest-api
+          description: "Fetch data from REST APIs"
+          config:
+            endpoints:
+              - "https://api.example.com/v1/users"
+              - "https://api.example.com/v1/events"
+        - name: ingest-files
+          description: "Process CSV and JSON files"
+          config:
+            paths:
+              - "s3://bucket/data/2024/*.csv"
+              - "s3://bucket/logs/2024/*.json"
+    
+    # Stage 2: Data Validation
+    - name: data-validation
+      description: "Validate and clean ingested data"
+      dependencies: ["data-ingestion"]
+      agentTypes: ["worker"]
+      maxAgents: 3
+      timeout: 300s
+      tasks:
+        - name: schema-validation
+          description: "Validate data schemas"
+        - name: data-quality-check
+          description: "Check for missing values and anomalies"
+        - name: data-deduplication
+          description: "Remove duplicate records"
+    
+    # Stage 3: Data Transformation
+    - name: data-transformation
+      description: "Transform and enrich data"
+      dependencies: ["data-validation"]
+      agentTypes: ["worker"]
+      maxAgents: 5
+      timeout: 900s
+      parallel: true
+      tasks:
+        - name: feature-engineering
+          description: "Create derived features for ML"
+          config:
+            features:
+              - "user_lifetime_value"
+              - "transaction_risk_score"
+              - "engagement_metrics"
+        - name: data-aggregation
+          description: "Aggregate data by various dimensions"
+          config:
+            dimensions: ["time", "geography", "product", "customer"]
+        - name: data-enrichment
+          description: "Enrich with external data sources"
+    
+    # Stage 4: Analytics Processing
+    - name: analytics
+      description: "Run analytics and ML models"
+      dependencies: ["data-transformation"]
+      agentTypes: ["worker", "analyzer"]
+      maxAgents: 6
+      timeout: 1800s
+      parallel: true
+      tasks:
+        - name: statistical-analysis
+          description: "Perform statistical analysis"
+          config:
+            methods: ["regression", "correlation", "time-series"]
+        - name: ml-prediction
+          description: "Run ML prediction models"
+          config:
+            models:
+              - name: "customer-churn"
+                type: "classification"
+              - name: "revenue-forecast"
+                type: "regression"
+              - name: "anomaly-detection"
+                type: "unsupervised"
+        - name: pattern-mining
+          description: "Discover patterns and associations"
+    
+    # Stage 5: Report Generation
+    - name: reporting
+      description: "Generate reports and visualizations"
+      dependencies: ["analytics"]
+      agentTypes: ["coordinator", "worker"]
+      maxAgents: 2
+      timeout: 600s
+      tasks:
+        - name: executive-dashboard
+          description: "Create executive dashboard"
+          config:
+            format: "html"
+            charts: ["kpi-metrics", "trend-analysis", "forecasts"]
+        - name: detailed-reports
+          description: "Generate detailed reports"
+          config:
+            formats: ["pdf", "excel", "json"]
+            sections: ["summary", "methodology", "findings", "recommendations"]
+        - name: data-export
+          description: "Export processed data"
+          config:
+            destinations:
+              - "s3://bucket/processed/2024/"
+              - "postgresql://db.example.com/analytics"
+    
+    # Stage 6: Notification and Cleanup
+    - name: finalization
+      description: "Send notifications and cleanup"
+      dependencies: ["reporting"]
+      agentTypes: ["coordinator"]
+      maxAgents: 1
+      timeout: 300s
+      tasks:
+        - name: send-notifications
+          description: "Notify stakeholders"
+          config:
+            channels: ["email", "slack", "webhook"]
+            recipients: ["data-team@example.com", "#data-pipeline"]
+        - name: cleanup-temp-data
+          description: "Remove temporary files and data"
+        - name: update-metadata
+          description: "Update pipeline metadata and logs"
+  
+  # Resource requirements for the entire workflow
+  resources:
+    requests:
+      cpu: "8000m"
+      memory: "32Gi"
+    limits:
+      cpu: "16000m"
+      memory: "64Gi"
+  
+  # Workflow-level configuration
+  config:
+    # Checkpointing for fault tolerance
+    checkpointing:
+      enabled: true
+      interval: 300s
+      storage: "s3://bucket/checkpoints/"
+    
+    # Retry configuration for failed stages
+    retry:
+      maxAttempts: 3
+      backoffMultiplier: 2
+      initialBackoff: 30s
+      maxBackoff: 300s
+    
+    # Data partitioning for parallel processing
+    partitioning:
+      enabled: true
+      strategy: "hash"
+      partitions: 16
+    
+    # Monitoring and alerting
+    monitoring:
+      metrics:
+        - "stage_duration"
+        - "records_processed"
+        - "error_rate"
+        - "resource_utilization"
+      alerts:
+        - condition: "error_rate > 0.05"
+          severity: "warning"
+        - condition: "stage_duration > timeout * 0.9"
+          severity: "critical"
+  
+  # Success criteria for the workflow
+  successCriteria:
+    - metric: "data_quality_score"
+      operator: GreaterThan
+      value: 0.98
+    - metric: "processing_time"
+      operator: LessThan
+      value: 7200
+    - metric: "records_processed"
+      operator: GreaterThan
+      value: 1000000
+  
+  # Failure handling
+  onFailure:
+    action: "rollback"
+    notificationChannels: ["pagerduty", "slack-oncall"]
+    preserveData: true
+    
+---
+# ConfigMap for workflow configuration
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: data-pipeline-config
+  namespace: default
+data:
+  database.yaml: |
+    connections:
+      primary:
+        host: db.example.com
+        port: 5432
+        database: production
+        pool_size: 10
+      analytics:
+        host: analytics-db.example.com
+        port: 5432
+        database: analytics
+        pool_size: 5
+  
+  models.yaml: |
+    ml_models:
+      customer_churn:
+        path: s3://models/customer-churn/latest
+        features: ["tenure", "monthly_charges", "total_charges", "contract_type"]
+        threshold: 0.7
+      revenue_forecast:
+        path: s3://models/revenue-forecast/latest
+        lookback_days: 90
+        forecast_days: 30
+
+---
+# PersistentVolumeClaim for workflow data
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: workflow-data
+  namespace: default
+spec:
+  accessModes:
+    - ReadWriteMany
+  resources:
+    requests:
+      storage: 100Gi
+  storageClassName: fast-ssd
+
+---
+# NetworkPolicy for secure communication
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: workflow-network-policy
+  namespace: default
+spec:
+  podSelector:
+    matchLabels:
+      task: data-pipeline-workflow
+  policyTypes:
+  - Ingress
+  - Egress
+  ingress:
+  - from:
+    - podSelector:
+        matchLabels:
+          swarm: hierarchical-swarm
+    ports:
+    - protocol: TCP
+      port: 8080
+  egress:
+  - to:
+    - podSelector:
+        matchLabels:
+          swarm: hierarchical-swarm
+    ports:
+    - protocol: TCP
+      port: 8080
+  - to:
+    - namespaceSelector: {}
+    ports:
+    - protocol: TCP
+      port: 443  # For external API calls
+    - protocol: TCP
+      port: 5432 # For PostgreSQL

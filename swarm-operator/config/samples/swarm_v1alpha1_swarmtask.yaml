@@ -1,0 +1,76 @@
+apiVersion: swarm.claudeflow.io/v1alpha1
+kind: SwarmTask
+metadata:
+  labels:
+    app.kubernetes.io/name: swarmtask
+    app.kubernetes.io/instance: swarmtask-sample
+    app.kubernetes.io/part-of: swarm-operator
+    app.kubernetes.io/managed-by: kustomize
+    app.kubernetes.io/created-by: swarm-operator
+  name: swarmtask-sample
+spec:
+  swarmCluster: swarmcluster-sample
+  description: "Analyze and refactor the authentication module"
+  type: "development"
+  priority: high
+  strategy: adaptive
+  requiredCapabilities:
+    - "code-analysis"
+    - "security-review"
+    - "refactoring"
+  preferredAgentTypes:
+    - architect
+    - coder
+    - tester
+  subtasks:
+    - name: "analyze-current-auth"
+      type: "analysis"
+      description: "Analyze the current authentication implementation"
+      requiredCapabilities:
+        - "code-analysis"
+        - "security-review"
+      estimatedDuration: 300
+    - name: "design-improvements"
+      type: "design"
+      description: "Design security and performance improvements"
+      requiredCapabilities:
+        - "architecture"
+        - "security-design"
+      estimatedDuration: 600
+    - name: "implement-changes"
+      type: "implementation"
+      description: "Implement the designed improvements"
+      requiredCapabilities:
+        - "coding"
+        - "refactoring"
+      estimatedDuration: 1800
+    - name: "write-tests"
+      type: "testing"
+      description: "Write comprehensive tests for the new implementation"
+      requiredCapabilities:
+        - "testing"
+        - "security-testing"
+      estimatedDuration: 900
+  dependencies:
+    - from: "analyze-current-auth"
+      to: "design-improvements"
+      type: "completion"
+    - from: "design-improvements"
+      to: "implement-changes"
+      type: "completion"
+    - from: "implement-changes"
+      to: "write-tests"
+      type: "data"
+  parameters:
+    module: "auth"
+    framework: "oauth2"
+    coverage-target: "90"
+  timeout: 7200
+  retryPolicy:
+    maxRetries: 3
+    backoffSeconds: 60
+    backoffMultiplier: 2.0
+  resultStorage:
+    type: configmap
+    name: "swarmtask-results"
+    path: "/results/auth-refactor"

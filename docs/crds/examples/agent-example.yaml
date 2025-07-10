@@ -1,0 +1,272 @@
+# Example: Coordinator agent with advanced capabilities
+apiVersion: flow.claude.ai/v1alpha1
+kind: Agent
+metadata:
+  name: lead-coordinator
+  namespace: default
+  labels:
+    swarm: app-dev-swarm
+    role: leadership
+spec:
+  type: coordinator
+  swarmRef:
+    name: app-dev-swarm
+  
+  capabilities:
+  - project-management
+  - task-distribution
+  - progress-tracking
+  - conflict-resolution
+  - resource-optimization
+  
+  cognitivePattern: systems
+  
+  learningConfig:
+    enabled: true
+    learningRate: 0.15
+    memoryRetention: "14d"
+    adaptationThreshold: 0.8
+  
+  resources:
+    memory: "2Gi"
+    cpu: "2000m"
+    gpu:
+      enabled: false
+  
+  neuralConfig:
+    modelType: transformer
+    layers: 24
+    hiddenSize: 1024
+    attentionHeads: 16
+    quantization: true
+  
+  communication:
+    endpoint: "coordinator-service.default.svc.cluster.local"
+    port: 50051
+    protocol: grpc
+    peers:
+    - name: architect-agent-1
+      priority: 9
+    - name: architect-agent-2
+      priority: 9
+    - name: test-coordinator
+      priority: 8
+  
+  priority: 10
+  
+  persistence:
+    enabled: true
+    checkpointInterval: "2m"
+    storageClass: "fast-ssd"
+  
+  security:
+    encryption: true
+    authentication: mtls
+    rbac:
+      enabled: true
+      role: "swarm-coordinator"
+      serviceAccount: "coordinator-sa"
+
+---
+# Example: Specialized coder agent for backend development
+apiVersion: flow.claude.ai/v1alpha1
+kind: Agent
+metadata:
+  name: backend-coder-1
+  namespace: default
+  labels:
+    swarm: app-dev-swarm
+    specialization: backend
+spec:
+  type: coder
+  swarmRef:
+    name: app-dev-swarm
+  
+  capabilities:
+  - golang
+  - python
+  - rust
+  - microservices
+  - api-development
+  - database-integration
+  - event-driven-architecture
+  
+  cognitivePattern: convergent
+  
+  learningConfig:
+    enabled: true
+    learningRate: 0.2
+    memoryRetention: "7d"
+    adaptationThreshold: 0.75
+  
+  resources:
+    memory: "1Gi"
+    cpu: "1000m"
+  
+  neuralConfig:
+    modelType: lstm
+    layers: 8
+    hiddenSize: 512
+    quantization: false
+  
+  communication:
+    endpoint: "backend-coder-1.default.svc.cluster.local"
+    port: 50052
+    protocol: grpc
+    peers:
+    - name: lead-coordinator
+      priority: 10
+    - name: database-analyst
+      priority: 8
+    - name: api-tester
+      priority: 7
+  
+  priority: 7
+  
+  persistence:
+    enabled: true
+    checkpointInterval: "5m"
+    storageClass: "standard"
+  
+  security:
+    encryption: true
+    authentication: token
+    rbac:
+      enabled: true
+      role: "agent-coder"
+      serviceAccount: "coder-sa"
+
+---
+# Example: AI-powered analyst with GPU acceleration
+apiVersion: flow.claude.ai/v1alpha1
+kind: Agent
+metadata:
+  name: ai-analyst
+  namespace: research
+  labels:
+    swarm: research-swarm
+    capability: deep-learning
+spec:
+  type: analyst
+  swarmRef:
+    name: research-swarm
+    namespace: research
+  
+  capabilities:
+  - deep-learning
+  - neural-networks
+  - computer-vision
+  - nlp
+  - pattern-recognition
+  - anomaly-detection
+  - predictive-modeling
+  
+  cognitivePattern: divergent
+  
+  learningConfig:
+    enabled: true
+    learningRate: 0.3
+    memoryRetention: "30d"
+    adaptationThreshold: 0.85
+  
+  resources:
+    memory: "8Gi"
+    cpu: "4000m"
+    gpu:
+      enabled: true
+      count: 2
+      type: "nvidia-a100"
+  
+  neuralConfig:
+    modelType: hybrid
+    layers: 48
+    hiddenSize: 2048
+    attentionHeads: 32
+    quantization: false
+  
+  communication:
+    endpoint: "ai-analyst.research.svc.cluster.local"
+    port: 50055
+    protocol: grpc
+    peers:
+    - name: research-coordinator
+      priority: 10
+  
+  priority: 9
+  
+  persistence:
+    enabled: true
+    checkpointInterval: "1m"
+    storageClass: "nvme-ssd"
+  
+  security:
+    encryption: true
+    authentication: oauth
+    rbac:
+      enabled: true
+      role: "ai-researcher"
+      serviceAccount: "ai-analyst-sa"
+
+---
+# Example: Lightweight monitor agent
+apiVersion: flow.claude.ai/v1alpha1
+kind: Agent
+metadata:
+  name: system-monitor
+  namespace: operations
+  labels:
+    swarm: incident-response-swarm
+    role: observability
+spec:
+  type: monitor
+  swarmRef:
+    name: incident-response-swarm
+    namespace: operations
+  
+  capabilities:
+  - log-parsing
+  - metric-collection
+  - alert-generation
+  - trend-analysis
+  - real-time-monitoring
+  
+  cognitivePattern: adaptive
+  
+  learningConfig:
+    enabled: true
+    learningRate: 0.1
+    memoryRetention: "3d"
+    adaptationThreshold: 0.7
+  
+  resources:
+    memory: "512Mi"
+    cpu: "500m"
+  
+  neuralConfig:
+    modelType: gru
+    layers: 4
+    hiddenSize: 256
+    quantization: true
+  
+  communication:
+    endpoint: "monitor-service.operations.svc.cluster.local"
+    port: 50060
+    protocol: websocket
+    peers:
+    - name: incident-coordinator
+      priority: 10
+    - name: log-analyst
+      priority: 7
+  
+  priority: 8
+  
+  persistence:
+    enabled: false  # Stateless monitoring
+  
+  security:
+    encryption: false  # Internal only
+    authentication: none
+    rbac:
+      enabled: true
+      role: "monitor"
+      serviceAccount: "monitor-sa"

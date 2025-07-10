@@ -1,0 +1,46 @@
+apiVersion: swarm.claudeflow.io/v1alpha1
+kind: SwarmCluster
+metadata:
+  name: github-automation-swarm
+  namespace: default
+spec:
+  topology: hierarchical
+  agentCount: 3
+  agentTemplate:
+    type: coder
+    capabilities:
+    - "go-development"
+    - "github-api"
+    - "repository-management"
+    resources:
+      requests:
+        cpu: "200m"
+        memory: "256Mi"
+      limits:
+        cpu: "500m"
+        memory: "512Mi"
+  taskDistribution:
+    strategy: parallel
+    maxTasksPerAgent: 2
+---
+apiVersion: swarm.claudeflow.io/v1alpha1
+kind: SwarmTask
+metadata:
+  name: create-hello-world-repo
+  namespace: default
+spec:
+  swarmRef: github-automation-swarm
+  task: "Create a Go hello world application and upload it to a new GitHub repository"
+  priority: high
+  strategy: sequential
+  timeout: "10m"
+  subtasks:
+  - name: "create-go-app"
+    description: "Create Go hello world application with proper structure"
+  - name: "create-github-repo"
+    description: "Create new repository on GitHub"
+  - name: "push-code"
+    description: "Push code to the new repository"
+    dependencies:
+    - "create-go-app"
+    - "create-github-repo"

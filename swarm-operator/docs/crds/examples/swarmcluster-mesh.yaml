@@ -1,0 +1,39 @@
+apiVersion: swarm.claudeflow.io/v1alpha1
+kind: SwarmCluster
+metadata:
+  name: example-mesh-swarm
+  namespace: default
+spec:
+  topology: mesh
+  maxAgents: 10
+  minAgents: 3
+  strategy: balanced
+  
+  agentTemplate:
+    capabilities:
+      - "code-generation"
+      - "analysis"
+      - "testing"
+      - "documentation"
+    cognitivePatterns:
+      - "adaptive"
+      - "systems"
+      - "convergent"
+    resources:
+      cpu: "100m"
+      memory: "256Mi"
+  
+  taskDistribution:
+    algorithm: capability-based
+    maxTasksPerAgent: 5
+    taskTimeout: 300
+  
+  autoScaling:
+    enabled: true
+    scaleUpThreshold: 70
+    scaleDownThreshold: 20
+    metrics:
+      - type: cpu
+        target: "70"
+      - type: task-queue
+        target: "10"

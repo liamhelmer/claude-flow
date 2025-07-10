@@ -1,0 +1,11 @@
+apiVersion: swarm.claudeflow.io/v1alpha1
+kind: SwarmTask
+metadata:
+  name: github-hello-world-v2
+  namespace: default
+spec:
+  swarmRef: github-automation-swarm
+  task: "Create a Go hello world application and upload it to a new GitHub repository"
+  priority: high
+  strategy: sequential
+  timeout: "10m"

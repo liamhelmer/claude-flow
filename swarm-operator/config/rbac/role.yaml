@@ -1,0 +1,85 @@
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: manager-role
+rules:
+- apiGroups:
+  - ""
+  resources:
+  - events
+  verbs:
+  - create
+  - patch
+- apiGroups:
+  - swarm.claudeflow.io
+  resources:
+  - agents
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - swarm.claudeflow.io
+  resources:
+  - agents/status
+  verbs:
+  - get
+  - patch
+  - update
+- apiGroups:
+  - swarm.claudeflow.io
+  resources:
+  - swarmclusters
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - swarm.claudeflow.io
+  resources:
+  - swarmclusters/finalizers
+  verbs:
+  - update
+- apiGroups:
+  - swarm.claudeflow.io
+  resources:
+  - swarmclusters/status
+  verbs:
+  - get
+  - patch
+  - update
+- apiGroups:
+  - swarm.claudeflow.io
+  resources:
+  - swarmtasks
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - swarm.claudeflow.io
+  resources:
+  - swarmtasks/finalizers
+  verbs:
+  - update
+- apiGroups:
+  - swarm.claudeflow.io
+  resources:
+  - swarmtasks/status
+  verbs:
+  - get
+  - patch
+  - update

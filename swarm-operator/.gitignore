@@ -1,0 +1,57 @@
+# Binaries for programs and plugins
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+bin/
+bin/*
+
+# Test binary, built with `go test -c`
+*.test
+
+# Output of the go coverage tool
+*.out
+cover.out
+coverage.html
+
+# Go workspace file
+go.work
+
+# Dependency directories
+vendor/
+
+# IDE specific files
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# Kubebuilder assets
+testbin/
+
+# Kubernetes
+*.yaml-e
+
+# Temporary files
+*.tmp
+*.bak
+
+# Operating System Files
+.DS_Store
+Thumbs.db
+
+# Docker
+.dockerignore
+
+# Environment files
+.env
+.env.local
+
+# Build artifacts
+dist/
+
+# Local development
+.local/
+.cache/

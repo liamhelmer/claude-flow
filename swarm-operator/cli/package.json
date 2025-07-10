@@ -1,0 +1,22 @@
+{
+  "name": "claude-flow-k8s",
+  "version": "1.0.0",
+  "description": "Claude Flow CLI with Kubernetes integration for swarm orchestration",
+  "main": "claude-flow-k8s.js",
+  "bin": {
+    "claude-flow-k8s": "./claude-flow-k8s.js"
+  },
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [
+    "claude-flow",
+    "kubernetes",
+    "swarm",
+    "ai",
+    "orchestration"
+  ],
+  "author": "Claude Flow Team",
+  "license": "MIT",
+  "dependencies": {}
+}

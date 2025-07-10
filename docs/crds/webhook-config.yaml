@@ -1,0 +1,185 @@
+apiVersion: admissionregistration.k8s.io/v1
+kind: ValidatingWebhookConfiguration
+metadata:
+  name: claude-flow-validating-webhook
+  annotations:
+    cert-manager.io/inject-ca-from: claude-flow-system/claude-flow-serving-cert
+webhooks:
+- name: vswarm.flow.claude.ai
+  clientConfig:
+    service:
+      name: claude-flow-webhook-service
+      namespace: claude-flow-system
+      path: /validate-flow-claude-ai-v1alpha1-swarm
+  failurePolicy: Fail
+  rules:
+  - apiGroups:
+    - flow.claude.ai
+    apiVersions:
+    - v1alpha1
+    operations:
+    - CREATE
+    - UPDATE
+    resources:
+    - swarms
+  admissionReviewVersions:
+  - v1
+  - v1beta1
+  sideEffects: None
+  timeoutSeconds: 10
+- name: vagent.flow.claude.ai
+  clientConfig:
+    service:
+      name: claude-flow-webhook-service
+      namespace: claude-flow-system
+      path: /validate-flow-claude-ai-v1alpha1-agent
+  failurePolicy: Fail
+  rules:
+  - apiGroups:
+    - flow.claude.ai
+    apiVersions:
+    - v1alpha1
+    operations:
+    - CREATE
+    - UPDATE
+    resources:
+    - agents
+  admissionReviewVersions:
+  - v1
+  - v1beta1
+  sideEffects: None
+  timeoutSeconds: 10
+- name: vtask.flow.claude.ai
+  clientConfig:
+    service:
+      name: claude-flow-webhook-service
+      namespace: claude-flow-system
+      path: /validate-flow-claude-ai-v1alpha1-task
+  failurePolicy: Fail
+  rules:
+  - apiGroups:
+    - flow.claude.ai
+    apiVersions:
+    - v1alpha1
+    operations:
+    - CREATE
+    - UPDATE
+    resources:
+    - tasks
+  admissionReviewVersions:
+  - v1
+  - v1beta1
+  sideEffects: None
+  timeoutSeconds: 10
+---
+apiVersion: admissionregistration.k8s.io/v1
+kind: MutatingWebhookConfiguration
+metadata:
+  name: claude-flow-mutating-webhook
+  annotations:
+    cert-manager.io/inject-ca-from: claude-flow-system/claude-flow-serving-cert
+webhooks:
+- name: mswarm.flow.claude.ai
+  clientConfig:
+    service:
+      name: claude-flow-webhook-service
+      namespace: claude-flow-system
+      path: /mutate-flow-claude-ai-v1alpha1-swarm
+  failurePolicy: Fail
+  rules:
+  - apiGroups:
+    - flow.claude.ai
+    apiVersions:
+    - v1alpha1
+    operations:
+    - CREATE
+    - UPDATE
+    resources:
+    - swarms
+  admissionReviewVersions:
+  - v1
+  - v1beta1
+  sideEffects: None
+  timeoutSeconds: 10
+- name: magent.flow.claude.ai
+  clientConfig:
+    service:
+      name: claude-flow-webhook-service
+      namespace: claude-flow-system
+      path: /mutate-flow-claude-ai-v1alpha1-agent
+  failurePolicy: Fail
+  rules:
+  - apiGroups:
+    - flow.claude.ai
+    apiVersions:
+    - v1alpha1
+    operations:
+    - CREATE
+    - UPDATE
+    resources:
+    - agents
+  admissionReviewVersions:
+  - v1
+  - v1beta1
+  sideEffects: None
+  timeoutSeconds: 10
+- name: mtask.flow.claude.ai
+  clientConfig:
+    service:
+      name: claude-flow-webhook-service
+      namespace: claude-flow-system
+      path: /mutate-flow-claude-ai-v1alpha1-task
+  failurePolicy: Fail
+  rules:
+  - apiGroups:
+    - flow.claude.ai
+    apiVersions:
+    - v1alpha1
+    operations:
+    - CREATE
+    - UPDATE
+    resources:
+    - tasks
+  admissionReviewVersions:
+  - v1
+  - v1beta1
+  sideEffects: None
+  timeoutSeconds: 10
+---
+# Webhook Service
+apiVersion: v1
+kind: Service
+metadata:
+  name: claude-flow-webhook-service
+  namespace: claude-flow-system
+spec:
+  ports:
+  - name: webhook
+    port: 443
+    targetPort: 9443
+    protocol: TCP
+  selector:
+    app: claude-flow-webhook
+---
+# Certificate for webhook TLS
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: claude-flow-serving-cert
+  namespace: claude-flow-system
+spec:
+  dnsNames:
+  - claude-flow-webhook-service.claude-flow-system.svc
+  - claude-flow-webhook-service.claude-flow-system.svc.cluster.local
+  issuerRef:
+    kind: Issuer
+    name: claude-flow-selfsigned-issuer
+  secretName: claude-flow-webhook-tls
+---
+apiVersion: cert-manager.io/v1
+kind: Issuer
+metadata:
+  name: claude-flow-selfsigned-issuer
+  namespace: claude-flow-system
+spec:
+  selfSigned: {}

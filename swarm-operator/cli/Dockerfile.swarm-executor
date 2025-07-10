@@ -1,0 +1,272 @@
+# Enhanced Swarm Executor Image for Claude Flow
+# This image is used for executing swarm tasks with comprehensive tooling
+
+FROM ubuntu:22.04
+
+# Set environment variables
+ENV DEBIAN_FRONTEND=noninteractive \
+    TZ=UTC \
+    PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/google-cloud-sdk/bin \
+    CLOUDSDK_PYTHON=python3
+
+# Install base dependencies and development tools
+RUN apt-get update && apt-get install -y \
+    # Basic utilities
+    curl \
+    wget \
+    ca-certificates \
+    gnupg \
+    lsb-release \
+    software-properties-common \
+    apt-transport-https \
+    # Development tools
+    git \
+    vim \
+    nano \
+    jq \
+    yq \
+    unzip \
+    zip \
+    tar \
+    gzip \
+    # Build tools
+    build-essential \
+    make \
+    gcc \
+    g++ \
+    # Python and pip
+    python3 \
+    python3-pip \
+    python3-dev \
+    python3-venv \
+    # Node.js dependencies
+    nodejs \
+    npm \
+    # Network tools
+    netcat-openbsd \
+    dnsutils \
+    iputils-ping \
+    traceroute \
+    telnet \
+    openssh-client \
+    # Process management
+    htop \
+    procps \
+    psmisc \
+    # Security tools
+    openssl \
+    gnupg2 \
+    && rm -rf /var/lib/apt/lists/*
+
+# Install kubectl
+RUN curl -LO "https://dl.k8s.io/release/$(curl -L -s https://dl.k8s.io/release/stable.txt)/bin/linux/amd64/kubectl" \
+    && install -o root -g root -m 0755 kubectl /usr/local/bin/kubectl \
+    && rm kubectl
+
+# Install Helm
+RUN curl https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-3 | bash
+
+# Install Terraform
+ARG TERRAFORM_VERSION=1.7.0
+RUN wget -q https://releases.hashicorp.com/terraform/${TERRAFORM_VERSION}/terraform_${TERRAFORM_VERSION}_linux_amd64.zip \
+    && unzip terraform_${TERRAFORM_VERSION}_linux_amd64.zip \
+    && mv terraform /usr/local/bin/ \
+    && rm terraform_${TERRAFORM_VERSION}_linux_amd64.zip
+
+# Install Google Cloud SDK with all components
+RUN echo "deb [signed-by=/usr/share/keyrings/cloud.google.gpg] https://packages.cloud.google.com/apt cloud-sdk main" | tee -a /etc/apt/sources.list.d/google-cloud-sdk.list \
+    && curl https://packages.cloud.google.com/apt/doc/apt-key.gpg | apt-key --keyring /usr/share/keyrings/cloud.google.gpg add - \
+    && apt-get update && apt-get install -y \
+    google-cloud-cli \
+    google-cloud-cli-app-engine-go \
+    google-cloud-cli-app-engine-python \
+    google-cloud-cli-app-engine-python-extras \
+    google-cloud-cli-app-engine-java \
+    google-cloud-cli-bigtable-emulator \
+    google-cloud-cli-cbt \
+    google-cloud-cli-cloud-build-local \
+    google-cloud-cli-datastore-emulator \
+    google-cloud-cli-firestore-emulator \
+    google-cloud-cli-gke-gcloud-auth-plugin \
+    google-cloud-cli-kpt \
+    google-cloud-cli-kubectl-oidc \
+    google-cloud-cli-local-extract \
+    google-cloud-cli-minikube \
+    google-cloud-cli-pubsub-emulator \
+    google-cloud-cli-skaffold \
+    google-cloud-cli-spanner-emulator \
+    google-cloud-cli-terraform-validator \
+    google-cloud-cli-anthos-auth \
+    kubectl-oidc \
+    && rm -rf /var/lib/apt/lists/*
+
+# Install all gcloud alpha and beta components
+RUN gcloud components install alpha beta --quiet
+
+# Install AWS CLI v2
+RUN curl "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o "awscliv2.zip" \
+    && unzip awscliv2.zip \
+    && ./aws/install \
+    && rm -rf awscliv2.zip aws
+
+# Install Azure CLI
+RUN curl -sL https://aka.ms/InstallAzureCLIDeb | bash
+
+# Install Docker CLI (for Docker-in-Docker scenarios)
+RUN install -m 0755 -d /etc/apt/keyrings \
+    && curl -fsSL https://download.docker.com/linux/ubuntu/gpg | gpg --dearmor -o /etc/apt/keyrings/docker.gpg \
+    && chmod a+r /etc/apt/keyrings/docker.gpg \
+    && echo "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.gpg] https://download.docker.com/linux/ubuntu $(lsb_release -cs) stable" | tee /etc/apt/sources.list.d/docker.list > /dev/null \
+    && apt-get update \
+    && apt-get install -y docker-ce-cli docker-compose-plugin \
+    && rm -rf /var/lib/apt/lists/*
+
+# Install Go
+ARG GO_VERSION=1.21.6
+RUN wget -q https://go.dev/dl/go${GO_VERSION}.linux-amd64.tar.gz \
+    && tar -C /usr/local -xzf go${GO_VERSION}.linux-amd64.tar.gz \
+    && rm go${GO_VERSION}.linux-amd64.tar.gz
+ENV PATH=$PATH:/usr/local/go/bin
+ENV GOPATH=/go
+ENV PATH=$PATH:$GOPATH/bin
+
+# Install Claude Flow CLI
+RUN npm install -g claude-flow@latest
+
+# Install additional Python packages
+RUN pip3 install --upgrade pip setuptools wheel \
+    && pip3 install \
+    requests \
+    pyyaml \
+    kubernetes \
+    google-cloud-storage \
+    boto3 \
+    azure-storage-blob \
+    pandas \
+    numpy \
+    click \
+    rich \
+    httpx
+
+# Install k9s for Kubernetes management
+RUN wget -q https://github.com/derailed/k9s/releases/latest/download/k9s_Linux_amd64.tar.gz \
+    && tar -xzf k9s_Linux_amd64.tar.gz \
+    && mv k9s /usr/local/bin/ \
+    && rm k9s_Linux_amd64.tar.gz
+
+# Install kustomize
+RUN curl -s "https://raw.githubusercontent.com/kubernetes-sigs/kustomize/master/hack/install_kustomize.sh" | bash \
+    && mv kustomize /usr/local/bin/
+
+# Install stern for multi-pod log tailing
+RUN wget -q https://github.com/stern/stern/releases/latest/download/stern_$(uname -s | tr '[:upper:]' '[:lower:]')_amd64.tar.gz \
+    && tar -xzf stern_*.tar.gz \
+    && mv stern /usr/local/bin/ \
+    && rm stern_*.tar.gz
+
+# Create non-root user for running tasks
+RUN useradd -m -s /bin/bash swarm-user \
+    && mkdir -p /workspace /swarm-state /secrets \
+    && chown -R swarm-user:swarm-user /workspace /swarm-state
+
+# Setup Git configuration
+RUN git config --global user.email "swarm@claudeflow.io" \
+    && git config --global user.name "Claude Flow Swarm" \
+    && git config --global init.defaultBranch main \
+    && git config --global safe.directory '*'
+
+# Create directories for scripts and configurations
+RUN mkdir -p /scripts /configs /tmp/swarm
+
+# Add entrypoint script
+COPY <<'EOF' /scripts/entrypoint.sh
+#!/bin/bash
+set -e
+
+# Function to mount additional secrets if provided
+mount_secrets() {
+    if [ -n "$ADDITIONAL_SECRETS" ]; then
+        echo "Mounting additional secrets..."
+        # Parse JSON array of secret mount configurations
+        echo "$ADDITIONAL_SECRETS" | jq -r '.[] | @base64' | while read -r secret; do
+            _jq() {
+                echo "${secret}" | base64 --decode | jq -r "${1}"
+            }
+            
+            SECRET_NAME=$(_jq '.name')
+            MOUNT_PATH=$(_jq '.mountPath')
+            
+            echo "Mounting secret $SECRET_NAME to $MOUNT_PATH"
+            # Note: Actual mounting would be handled by Kubernetes volume mounts
+        done
+    fi
+}
+
+# Function to restore swarm state from PVC
+restore_state() {
+    if [ -d "/swarm-state" ] && [ "$(ls -A /swarm-state)" ]; then
+        echo "Restoring swarm state from persistent volume..."
+        if [ -f "/swarm-state/checkpoint.json" ]; then
+            export SWARM_STATE=$(cat /swarm-state/checkpoint.json)
+            echo "State restored successfully"
+        fi
+    fi
+}
+
+# Function to save swarm state to PVC
+save_state() {
+    if [ -d "/swarm-state" ]; then
+        echo "Saving swarm state to persistent volume..."
+        echo "$1" > /swarm-state/checkpoint.json
+        echo "State saved successfully"
+    fi
+}
+
+# Main execution
+echo "Starting Claude Flow Swarm Executor..."
+echo "Environment: $(env | grep -E '^(SWARM_|GITHUB_|CLOUD_|AWS_|AZURE_)' | sort)"
+
+# Mount secrets and restore state
+mount_secrets
+restore_state
+
+# Execute the main command
+if [ $# -eq 0 ]; then
+    echo "No command provided, starting interactive shell..."
+    exec /bin/bash
+else
+    echo "Executing command: $@"
+    exec "$@"
+fi
+EOF
+
+RUN chmod +x /scripts/entrypoint.sh
+
+# Add healthcheck script
+COPY <<'EOF' /scripts/healthcheck.sh
+#!/bin/bash
+# Simple healthcheck to verify key tools are available
+command -v kubectl >/dev/null 2>&1 || exit 1
+command -v terraform >/dev/null 2>&1 || exit 1
+command -v gcloud >/dev/null 2>&1 || exit 1
+command -v git >/dev/null 2>&1 || exit 1
+exit 0
+EOF
+
+RUN chmod +x /scripts/healthcheck.sh
+
+# Set up working directory
+WORKDIR /workspace
+
+# Switch to non-root user
+USER swarm-user
+
+# Health check
+HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 \
+    CMD ["/scripts/healthcheck.sh"]
+
+# Set entrypoint
+ENTRYPOINT ["/scripts/entrypoint.sh"]
+
+# Default command
+CMD ["/bin/bash"]

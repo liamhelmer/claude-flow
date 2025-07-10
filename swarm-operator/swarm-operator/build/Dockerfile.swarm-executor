@@ -1,0 +1,183 @@
+# Enhanced Swarm Executor Image with Cloud Tools
+FROM alpine:3.19
+
+# Install base dependencies
+RUN apk add --no-cache \
+    bash \
+    curl \
+    git \
+    jq \
+    yq \
+    make \
+    gcc \
+    g++ \
+    musl-dev \
+    linux-headers \
+    ca-certificates \
+    openssh-client \
+    gnupg \
+    tar \
+    gzip \
+    unzip \
+    wget \
+    vim \
+    tmux \
+    htop \
+    tree \
+    rsync \
+    bind-tools \
+    netcat-openbsd \
+    postgresql-client \
+    mysql-client \
+    redis \
+    busybox-extras
+
+# Install Python and pip
+RUN apk add --no-cache \
+    python3 \
+    python3-dev \
+    py3-pip \
+    py3-setuptools \
+    py3-wheel \
+    && python3 -m pip install --upgrade pip
+
+# Install Node.js
+RUN apk add --no-cache nodejs npm yarn
+
+# Install Go
+ENV GO_VERSION=1.22.0
+RUN wget https://go.dev/dl/go${GO_VERSION}.linux-amd64.tar.gz && \
+    tar -C /usr/local -xzf go${GO_VERSION}.linux-amd64.tar.gz && \
+    rm go${GO_VERSION}.linux-amd64.tar.gz
+ENV PATH="/usr/local/go/bin:${PATH}"
+ENV GOPATH="/go"
+ENV PATH="${GOPATH}/bin:${PATH}"
+
+# Install kubectl
+RUN curl -LO "https://dl.k8s.io/release/$(curl -L -s https://dl.k8s.io/release/stable.txt)/bin/linux/amd64/kubectl" && \
+    chmod +x kubectl && \
+    mv kubectl /usr/local/bin/
+
+# Install Terraform
+ENV TERRAFORM_VERSION=1.7.0
+RUN wget https://releases.hashicorp.com/terraform/${TERRAFORM_VERSION}/terraform_${TERRAFORM_VERSION}_linux_amd64.zip && \
+    unzip terraform_${TERRAFORM_VERSION}_linux_amd64.zip && \
+    mv terraform /usr/local/bin/ && \
+    rm terraform_${TERRAFORM_VERSION}_linux_amd64.zip
+
+# Install Google Cloud SDK with ALL components
+RUN apk add --no-cache python3 py3-crcmod bash libc6-compat && \
+    curl -O https://dl.google.com/dl/cloudsdk/channels/rapid/downloads/google-cloud-cli-linux-x86_64.tar.gz && \
+    tar -xf google-cloud-cli-linux-x86_64.tar.gz && \
+    rm google-cloud-cli-linux-x86_64.tar.gz && \
+    ./google-cloud-sdk/install.sh --quiet --path-update true --bash-completion true --rc-path /root/.bashrc && \
+    ./google-cloud-sdk/bin/gcloud config set core/disable_usage_reporting true && \
+    ./google-cloud-sdk/bin/gcloud config set component_manager/disable_update_check true && \
+    ./google-cloud-sdk/bin/gcloud config set metrics/environment github_docker_image
+
+# Install ALL gcloud components including alpha
+RUN /google-cloud-sdk/bin/gcloud components install \
+    alpha \
+    beta \
+    gke-gcloud-auth-plugin \
+    kubectl \
+    docker-credential-gcr \
+    app-engine-python \
+    app-engine-python-extras \
+    app-engine-go \
+    cloud-datastore-emulator \
+    cloud-firestore-emulator \
+    cloud-spanner-emulator \
+    pubsub-emulator \
+    bigtable \
+    datalab \
+    cloud-build-local \
+    cloud-run-proxy \
+    skaffold \
+    minikube \
+    kustomize \
+    anthos-auth \
+    appctl \
+    config-connector \
+    kpt \
+    kubectl-oidc \
+    local-extract \
+    nomos \
+    package-go-module \
+    --quiet
+
+ENV PATH="/google-cloud-sdk/bin:${PATH}"
+
+# Install AWS CLI v2
+RUN apk add --no-cache groff less && \
+    curl "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o "awscliv2.zip" && \
+    unzip awscliv2.zip && \
+    ./aws/install && \
+    rm -rf awscliv2.zip aws/
+
+# Install Azure CLI
+RUN apk add --no-cache --virtual .build-deps gcc musl-dev libffi-dev openssl-dev python3-dev && \
+    pip3 install --no-cache-dir azure-cli && \
+    apk del .build-deps
+
+# Install Helm
+RUN curl https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-3 | bash
+
+# Install additional Kubernetes tools
+RUN curl -Lo /usr/local/bin/k9s https://github.com/derailed/k9s/releases/latest/download/k9s_Linux_amd64 && \
+    chmod +x /usr/local/bin/k9s && \
+    curl -Lo /usr/local/bin/stern https://github.com/stern/stern/releases/latest/download/stern_linux_amd64 && \
+    chmod +x /usr/local/bin/stern
+
+# Install Docker CLI (for Docker-in-Docker scenarios)
+RUN apk add --no-cache docker-cli docker-cli-buildx
+
+# Install Python packages for GitHub App auth and cloud operations
+RUN pip3 install --no-cache-dir \
+    PyJWT \
+    cryptography \
+    requests \
+    google-cloud-storage \
+    google-cloud-bigquery \
+    google-cloud-pubsub \
+    google-cloud-secret-manager \
+    boto3 \
+    azure-storage-blob \
+    azure-keyvault-secrets \
+    kubernetes \
+    pyyaml \
+    jinja2 \
+    python-dotenv \
+    click \
+    rich \
+    httpx
+
+# Install claude-flow CLI
+RUN npm install -g claude-flow@latest
+
+# Create workspace directories
+RUN mkdir -p /workspace /swarm-state /secrets /credentials /scripts
+
+# Set up git defaults
+RUN git config --global user.name "Swarm Executor" && \
+    git config --global user.email "swarm-executor[bot]@users.noreply.github.com" && \
+    git config --global init.defaultBranch main && \
+    git config --global core.editor vim
+
+# Add helper scripts
+COPY scripts/entrypoint.sh /scripts/
+COPY scripts/checkpoint.sh /scripts/
+COPY scripts/resume.sh /scripts/
+RUN chmod +x /scripts/*.sh
+
+# Set working directory
+WORKDIR /workspace
+
+# Labels
+LABEL maintainer="Claude Flow Team"
+LABEL description="Enhanced Swarm Executor with Cloud Tools"
+LABEL version="2.0.0"
+
+# Default entrypoint
+ENTRYPOINT ["/scripts/entrypoint.sh"]
+CMD ["/bin/bash"]

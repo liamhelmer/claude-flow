@@ -1,0 +1,46 @@
+# Development container for Claude Flow Swarm Operator
+FROM golang:1.21-alpine AS base
+
+# Install basic development tools
+RUN apk add --no-cache \
+    git \
+    make \
+    bash \
+    curl \
+    gcc \
+    musl-dev \
+    openssh-client
+
+# Install kubectl
+RUN curl -LO "https://dl.k8s.io/release/$(curl -L -s https://dl.k8s.io/release/stable.txt)/bin/linux/amd64/kubectl" && \
+    chmod +x kubectl && \
+    mv kubectl /usr/local/bin/
+
+# Install kubebuilder
+ENV KUBEBUILDER_VERSION=3.14.0
+RUN curl -L -o kubebuilder "https://github.com/kubernetes-sigs/kubebuilder/releases/download/v${KUBEBUILDER_VERSION}/kubebuilder_linux_amd64" && \
+    chmod +x kubebuilder && \
+    mv kubebuilder /usr/local/bin/
+
+# Install controller-gen
+RUN go install sigs.k8s.io/controller-tools/cmd/controller-gen@v0.14.0
+
+# Install kustomize
+RUN curl -s "https://raw.githubusercontent.com/kubernetes-sigs/kustomize/master/hack/install_kustomize.sh" | bash && \
+    mv kustomize /usr/local/bin/
+
+# Set working directory
+WORKDIR /workspace
+
+# Configure Go environment
+ENV GO111MODULE=on \
+    CGO_ENABLED=0 \
+    GOOS=linux \
+    GOARCH=amd64
+
+# Create non-root user for development
+RUN adduser -D -u 1000 developer
+USER developer
+
+# Default command
+CMD ["/bin/bash"]

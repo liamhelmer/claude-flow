@@ -1,0 +1,64 @@
+apiVersion: krew.googlecontainertools.github.com/v1alpha2
+kind: Plugin
+metadata:
+  name: swarm
+spec:
+  version: {{VERSION}}
+  homepage: https://github.com/claude-flow/kubectl-swarm
+  shortDescription: Manage AI agent swarms in Kubernetes
+  description: |
+    kubectl-swarm is a kubectl plugin for managing AI agent swarms in Kubernetes.
+    It provides commands to create, scale, monitor, and manage distributed AI agent
+    swarms that coordinate task execution across your cluster.
+
+    Features:
+    - Create swarms with different topologies (mesh, hierarchical, ring, star)
+    - Scale agents up or down dynamically
+    - Submit and monitor tasks
+    - View aggregated logs from all agents
+    - Debug swarm issues with diagnostic tools
+    - Interactive mode with prompts
+    - Multiple output formats (table, JSON, YAML)
+    - Tab completion support
+
+  caveats: |
+    * This plugin requires the Swarm CRDs to be installed in your cluster
+    * For installation instructions, see:
+      https://github.com/claude-flow/kubectl-swarm#installation
+
+  platforms:
+  - selector:
+      matchLabels:
+        os: darwin
+        arch: amd64
+    uri: https://github.com/claude-flow/kubectl-swarm/releases/download/v{{VERSION}}/kubectl-swarm-darwin-amd64.tar.gz
+    sha256: TO_BE_GENERATED
+    bin: kubectl-swarm
+  - selector:
+      matchLabels:
+        os: darwin
+        arch: arm64
+    uri: https://github.com/claude-flow/kubectl-swarm/releases/download/v{{VERSION}}/kubectl-swarm-darwin-arm64.tar.gz
+    sha256: TO_BE_GENERATED
+    bin: kubectl-swarm
+  - selector:
+      matchLabels:
+        os: linux
+        arch: amd64
+    uri: https://github.com/claude-flow/kubectl-swarm/releases/download/v{{VERSION}}/kubectl-swarm-linux-amd64.tar.gz
+    sha256: TO_BE_GENERATED
+    bin: kubectl-swarm
+  - selector:
+      matchLabels:
+        os: linux
+        arch: arm64
+    uri: https://github.com/claude-flow/kubectl-swarm/releases/download/v{{VERSION}}/kubectl-swarm-linux-arm64.tar.gz
+    sha256: TO_BE_GENERATED
+    bin: kubectl-swarm
+  - selector:
+      matchLabels:
+        os: windows
+        arch: amd64
+    uri: https://github.com/claude-flow/kubectl-swarm/releases/download/v{{VERSION}}/kubectl-swarm-windows-amd64.tar.gz
+    sha256: TO_BE_GENERATED
+    bin: kubectl-swarm.exe

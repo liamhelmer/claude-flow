@@ -1,0 +1,88 @@
+# Node modules
+node_modules/
+package-lock.json
+
+# Build output
+build/
+dist/
+*.node
+
+# Database files
+*.db
+*.db-shm
+*.db-wal
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Environment variables
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# Test coverage
+coverage/
+.nyc_output/
+
+# Temporary files
+tmp/
+temp/
+*.tmp
+
+# Private keys and secrets
+*.pem
+*.key
+*.crt
+secrets/
+
+# Local configuration
+*.local.json
+.claude/settings.local.json
+
+# Kubernetes
+kubeconfig
+*.kubeconfig
+
+# Docker
+*.tar
+*.tar.gz
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+venv/
+env/
+
+# Go
+vendor/
+*.exe
+*.dll
+*.so
+*.dylib
+
+# Terraform
+*.tfstate
+*.tfstate.*
+.terraform/
+.terraform.lock.hcl
+
+# Backup files
+*.backup
+*.bak
+*~

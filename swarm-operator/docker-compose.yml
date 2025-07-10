@@ -1,0 +1,44 @@
+version: '3.8'
+
+services:
+  dev:
+    build:
+      context: .
+      dockerfile: Dockerfile.dev
+    image: claude-flow/swarm-operator-dev:latest
+    container_name: swarm-operator-dev
+    volumes:
+      - .:/workspace
+      - ${HOME}/.kube:/home/developer/.kube:ro
+      - go-cache:/go/pkg/mod
+      - go-build-cache:/home/developer/.cache/go-build
+    environment:
+      - KUBECONFIG=/home/developer/.kube/config
+      - GO111MODULE=on
+      - CGO_ENABLED=0
+    working_dir: /workspace
+    command: /bin/bash
+    stdin_open: true
+    tty: true
+    networks:
+      - operator-network
+
+  # Local Kubernetes cluster for testing (optional)
+  kind:
+    image: kindest/node:v1.29.0
+    container_name: swarm-operator-kind
+    privileged: true
+    ports:
+      - "6443:6443"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+    networks:
+      - operator-network
+
+volumes:
+  go-cache:
+  go-build-cache:
+
+networks:
+  operator-network:
+    driver: bridge

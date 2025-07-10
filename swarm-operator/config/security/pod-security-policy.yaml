@@ -1,0 +1,85 @@
+apiVersion: policy/v1beta1
+kind: PodSecurityPolicy
+metadata:
+  name: swarm-operator-psp
+  namespace: claude-flow-system
+spec:
+  # Privilege and Access Control
+  privileged: false
+  allowPrivilegeEscalation: false
+  requiredDropCapabilities:
+    - ALL
+  
+  # Volume restrictions
+  volumes:
+    - 'configMap'
+    - 'emptyDir'
+    - 'projected'
+    - 'secret'
+    - 'downwardAPI'
+    - 'persistentVolumeClaim'
+  
+  # Host restrictions
+  hostNetwork: false
+  hostIPC: false
+  hostPID: false
+  
+  # User and group restrictions
+  runAsUser:
+    rule: 'MustRunAsNonRoot'
+  runAsGroup:
+    rule: 'MustRunAs'
+    ranges:
+      - min: 1
+        max: 65535
+  supplementalGroups:
+    rule: 'MustRunAs'
+    ranges:
+      - min: 1
+        max: 65535
+  fsGroup:
+    rule: 'MustRunAs'
+    ranges:
+      - min: 1
+        max: 65535
+  
+  # SELinux
+  seLinux:
+    rule: 'RunAsAny'
+  
+  # Read-only root filesystem
+  readOnlyRootFilesystem: true
+  
+  # Seccomp profile
+  annotations:
+    seccomp.security.alpha.kubernetes.io/allowedProfileNames: 'docker/default,runtime/default'
+    seccomp.security.alpha.kubernetes.io/defaultProfileName: 'runtime/default'
+
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: swarm-operator-psp-user
+rules:
+  - apiGroups:
+      - policy
+    resources:
+      - podsecuritypolicies
+    verbs:
+      - use
+    resourceNames:
+      - swarm-operator-psp
+
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: swarm-operator-psp-binding
+roleRef:
+  kind: ClusterRole
+  name: swarm-operator-psp-user
+  apiGroup: rbac.authorization.k8s.io
+subjects:
+  - kind: ServiceAccount
+    name: swarm-operator-controller-manager
+    namespace: claude-flow-system

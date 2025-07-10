@@ -1,0 +1,111 @@
+{
+  "server": {
+    "transport": "stdio",
+    "port": 3000,
+    "host": "localhost",
+    "tlsEnabled": false,
+    "maxConnections": 100,
+    "requestTimeout": 30000,
+    "maxRequestSize": "10MB",
+    "compression": {
+      "enabled": true,
+      "algorithm": "gzip",
+      "threshold": "1KB"
+    }
+  },
+  "security": {
+    "authentication": {
+      "enabled": true,
+      "method": "token",
+      "tokenValidation": "strict",
+      "tokenExpiry": "24h",
+      "refreshTokens": true
+    },
+    "authorization": {
+      "enabled": true,
+      "defaultPolicy": "deny",
+      "policies": [
+        {
+          "name": "agent-access",
+          "resources": ["tools/*", "files/read", "files/write"],
+          "principals": ["agent:*"],
+          "actions": ["read", "write", "execute"],
+          "conditions": {
+            "time": "business-hours",
+            "rate-limit": "100/hour"
+          }
+        },
+        {
+          "name": "admin-access",
+          "resources": ["*"],
+          "principals": ["role:admin"],
+          "actions": ["*"]
+        }
+      ]
+    },
+    "encryption": {
+      "enabled": false,
+      "algorithm": "AES-256-GCM",
+      "keyRotationInterval": "24h",
+      "keyStorage": "environment"
+    },
+    "rateLimit": {
+      "enabled": true,
+      "requestsPerMinute": 100,
+      "burstSize": 20,
+      "keyBy": "client-id"
+    }
+  },
+  "tools": {
+    "registry": {
+      "autoDiscover": true,
+      "discoveryPaths": ["./tools", "./plugins", "./custom-tools"],
+      "remoteRegistries": [
+        {
+          "name": "official-tools",
+          "url": "https://registry.claude-flow.dev/tools",
+          "authToken": "${MCP_REGISTRY_TOKEN}"
+        }
+      ],
+      "cacheEnabled": true,
+      "cacheTTL": "1h"
+    },
+    "validation": {
+      "enabled": true,
+      "strictMode": false,
+      "schemaValidation": true,
+      "sandboxing": true
+    },
+    "execution": {
+      "timeout": "5m",
+      "retries": 3,
+      "parallelLimit": 10,
+      "resourceLimits": {
+        "memory": "512MB",
+        "cpu": "1000m",
+        "diskIO": "100MB/s"
+      }
+    }
+  },
+  "monitoring": {
+    "metrics": {
+      "enabled": true,
+      "endpoint": "/metrics",
+      "format": "prometheus"
+    },
+    "logging": {
+      "level": "info",
+      "format": "json",
+      "audit": true,
+      "auditLevel": "all",
+      "destination": "file",
+      "file": "logs/mcp-server.log"
+    },
+    "tracing": {
+      "enabled": true,
+      "sampler": "probabilistic",
+      "samplerParam": 0.1,
+      "endpoint": "http://jaeger:14268/api/traces"
+    }
+  }
+}

@@ -1,0 +1,210 @@
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  name: swarmtasks.swarm.claudeflow.io
+spec:
+  group: swarm.claudeflow.io
+  versions:
+  - name: v1alpha1
+    served: true
+    storage: true
+    additionalPrinterColumns:
+    - name: Swarm
+      type: string
+      jsonPath: .spec.swarmRef
+    - name: Priority
+      type: string
+      jsonPath: .spec.priority
+    - name: Phase
+      type: string
+      jsonPath: .status.phase
+    - name: Progress
+      type: integer
+      jsonPath: .status.progress
+    - name: Executor
+      type: string
+      jsonPath: .spec.executorImage
+    - name: Age
+      type: date
+      jsonPath: .metadata.creationTimestamp
+    schema:
+      openAPIV3Schema:
+        type: object
+        properties:
+          spec:
+            type: object
+            required:
+            - task
+            properties:
+              swarmRef:
+                type: string
+                description: Reference to the SwarmCluster
+              task:
+                type: string
+                description: Task description or command
+              priority:
+                type: string
+                enum: ["low", "medium", "high", "critical"]
+                default: "medium"
+              strategy:
+                type: string
+                enum: ["parallel", "sequential", "adaptive"]
+                default: "adaptive"
+              timeout:
+                type: string
+                default: "30m"
+                description: Task timeout duration
+              executorImage:
+                type: string
+                default: "claudeflow/swarm-executor:2.0.0"
+                description: Custom executor image with cloud tools
+              resume:
+                type: boolean
+                default: false
+                description: Enable task resumption from checkpoint
+              resources:
+                type: object
+                properties:
+                  limits:
+                    type: object
+                    properties:
+                      cpu:
+                        type: string
+                      memory:
+                        type: string
+                      "nvidia.com/gpu":
+                        type: string
+                  requests:
+                    type: object
+                    properties:
+                      cpu:
+                        type: string
+                      memory:
+                        type: string
+              additionalSecrets:
+                type: array
+                description: Additional secrets to mount
+                items:
+                  type: object
+                  required:
+                  - name
+                  properties:
+                    name:
+                      type: string
+                      description: Secret name
+                    mountPath:
+                      type: string
+                      default: "/secrets"
+                      description: Mount path in container
+                    items:
+                      type: array
+                      description: Specific keys to mount
+                      items:
+                        type: object
+                        properties:
+                          key:
+                            type: string
+                          path:
+                            type: string
+              persistentVolumes:
+                type: array
+                description: Persistent volumes for state storage
+                items:
+                  type: object
+                  required:
+                  - name
+                  - mountPath
+                  properties:
+                    name:
+                      type: string
+                      description: PVC name
+                    mountPath:
+                      type: string
+                      description: Mount path in container
+                    storageClass:
+                      type: string
+                      description: Storage class for dynamic provisioning
+                    size:
+                      type: string
+                      default: "10Gi"
+                      description: Storage size
+                    accessMode:
+                      type: string
+                      default: "ReadWriteOnce"
+                      enum: ["ReadWriteOnce", "ReadOnlyMany", "ReadWriteMany"]
+              environment:
+                type: object
+                description: Additional environment variables
+                additionalProperties:
+                  type: string
+              nodeSelector:
+                type: object
+                description: Node selection constraints
+                additionalProperties:
+                  type: string
+              tolerations:
+                type: array
+                description: Pod tolerations
+                items:
+                  type: object
+                  properties:
+                    key:
+                      type: string
+                    operator:
+                      type: string
+                    value:
+                      type: string
+                    effect:
+                      type: string
+          status:
+            type: object
+            properties:
+              phase:
+                type: string
+                enum: ["Pending", "Running", "Completed", "Failed", "Resuming"]
+              message:
+                type: string
+              progress:
+                type: integer
+                minimum: 0
+                maximum: 100
+              startTime:
+                type: string
+              completionTime:
+                type: string
+              lastTransitionTime:
+                type: string
+              jobName:
+                type: string
+                description: Associated Kubernetes Job name
+              checkpoint:
+                type: object
+                description: Last checkpoint information
+                properties:
+                  step:
+                    type: string
+                  timestamp:
+                    type: string
+                  data:
+                    type: object
+                    x-kubernetes-preserve-unknown-fields: true
+              volumes:
+                type: array
+                description: Created PVC status
+                items:
+                  type: object
+                  properties:
+                    name:
+                      type: string
+                    pvcName:
+                      type: string
+                    status:
+                      type: string
+  scope: Namespaced
+  names:
+    plural: swarmtasks
+    singular: swarmtask
+    kind: SwarmTask
+    shortNames:
+    - st
+    - task

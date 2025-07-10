@@ -1,0 +1,429 @@
+# Example: Complex multi-stage application development task
+apiVersion: flow.claude.ai/v1alpha1
+kind: Task
+metadata:
+  name: build-microservices-app
+  namespace: default
+  labels:
+    project: cloud-native-app
+    priority: high
+spec:
+  description: |
+    Build a complete microservices application with the following components:
+    - User authentication service with JWT
+    - Product catalog service with search
+    - Order management service
+    - Payment processing integration
+    - API Gateway with rate limiting
+    - Monitoring and observability stack
+  
+  swarmRef:
+    name: app-dev-swarm
+  
+  priority: high
+  strategy: adaptive
+  maxAgents: 10
+  
+  requiredCapabilities:
+  - microservices
+  - api-development
+  - authentication
+  - database-design
+  - testing
+  
+  preferredAgentTypes:
+  - architect
+  - coder
+  - tester
+  - analyst
+  
+  subtasks:
+  - name: design-architecture
+    description: Design overall microservices architecture
+    weight: 3
+    requiredCapabilities:
+    - system-design
+    - microservices
+    timeout: "2h"
+  
+  - name: setup-infrastructure
+    description: Set up Kubernetes manifests and CI/CD
+    dependencies:
+    - design-architecture
+    weight: 2
+    requiredCapabilities:
+    - kubernetes
+    - devops
+    timeout: "1h"
+  
+  - name: implement-auth-service
+    description: Build JWT-based authentication service
+    dependencies:
+    - design-architecture
+    weight: 5
+    requiredCapabilities:
+    - authentication
+    - api-development
+    timeout: "4h"
+  
+  - name: implement-catalog-service
+    description: Build product catalog with Elasticsearch
+    dependencies:
+    - design-architecture
+    weight: 4
+    requiredCapabilities:
+    - api-development
+    - elasticsearch
+    timeout: "3h"
+  
+  - name: implement-order-service
+    description: Build order management with state machine
+    dependencies:
+    - design-architecture
+    weight: 5
+    requiredCapabilities:
+    - api-development
+    - state-machines
+    timeout: "4h"
+  
+  - name: implement-payment-integration
+    description: Integrate with Stripe payment gateway
+    dependencies:
+    - implement-order-service
+    weight: 3
+    requiredCapabilities:
+    - payment-systems
+    - api-integration
+    timeout: "2h"
+  
+  - name: implement-api-gateway
+    description: Build API Gateway with Kong or Envoy
+    dependencies:
+    - implement-auth-service
+    - implement-catalog-service
+    - implement-order-service
+    weight: 3
+    requiredCapabilities:
+    - api-gateway
+    - rate-limiting
+    timeout: "2h"
+  
+  - name: write-tests
+    description: Write comprehensive test suites
+    dependencies:
+    - implement-auth-service
+    - implement-catalog-service
+    - implement-order-service
+    weight: 4
+    requiredCapabilities:
+    - testing
+    - test-automation
+    timeout: "3h"
+  
+  - name: setup-monitoring
+    description: Configure Prometheus, Grafana, and Jaeger
+    dependencies:
+    - setup-infrastructure
+    weight: 2
+    requiredCapabilities:
+    - observability
+    - monitoring
+    timeout: "1h"
+  
+  - name: write-documentation
+    description: Create API docs and deployment guides
+    dependencies:
+    - implement-api-gateway
+    - setup-monitoring
+    weight: 2
+    requiredCapabilities:
+    - technical-writing
+    - api-documentation
+    timeout: "2h"
+  
+  timeout: "24h"
+  
+  retryPolicy:
+    maxRetries: 3
+    backoffMultiplier: 2
+    retryableErrors:
+    - "NetworkError"
+    - "TimeoutError"
+    - "ResourceUnavailable"
+  
+  resources:
+    maxTokens: 500000
+    maxMemory: "16Gi"
+    maxTime: "24h"
+  
+  inputs:
+    projectName: "cloud-shop"
+    githubRepo: "https://github.com/example/cloud-shop"
+    targetEnvironment: "kubernetes"
+    authProvider: "auth0"
+    paymentProvider: "stripe"
+    searchBackend: "elasticsearch"
+  
+  outputs:
+    format: yaml
+    destination:
+      type: configmap
+      name: microservices-output
+  
+  monitoring:
+    collectMetrics: true
+    logLevel: info
+    tracing: true
+    alerts:
+    - condition: "progress < 25% after 6h"
+      threshold: "25"
+      action: notify
+    - condition: "error_rate > 10%"
+      threshold: "10"
+      action: retry
+    - condition: "task_timeout"
+      threshold: "24h"
+      action: abort
+
+---
+# Example: Research and analysis task
+apiVersion: flow.claude.ai/v1alpha1
+kind: Task
+metadata:
+  name: analyze-ml-frameworks
+  namespace: research
+  labels:
+    type: research
+    domain: machine-learning
+spec:
+  description: |
+    Conduct comprehensive analysis of modern ML frameworks:
+    - Performance benchmarks across different hardware
+    - Feature comparison and capabilities
+    - Community support and ecosystem
+    - Production readiness assessment
+    - Cost analysis for cloud deployment
+  
+  swarmRef:
+    name: research-swarm
+    namespace: research
+  
+  priority: medium
+  strategy: parallel
+  maxAgents: 15
+  
+  requiredCapabilities:
+  - machine-learning
+  - benchmarking
+  - data-analysis
+  - technical-writing
+  
+  preferredAgentTypes:
+  - researcher
+  - analyst
+  - reviewer
+  
+  subtasks:
+  - name: framework-identification
+    description: Identify top 10 ML frameworks to analyze
+    weight: 1
+    timeout: "30m"
+  
+  - name: benchmark-design
+    description: Design comprehensive benchmark suite
+    dependencies:
+    - framework-identification
+    weight: 2
+    timeout: "1h"
+  
+  - name: performance-testing
+    description: Run performance benchmarks on multiple platforms
+    dependencies:
+    - benchmark-design
+    weight: 5
+    requiredCapabilities:
+    - gpu-computing
+    - benchmarking
+    timeout: "6h"
+  
+  - name: feature-analysis
+    description: Analyze and compare framework features
+    dependencies:
+    - framework-identification
+    weight: 3
+    timeout: "2h"
+  
+  - name: ecosystem-research
+    description: Research community, docs, and tooling
+    dependencies:
+    - framework-identification
+    weight: 2
+    timeout: "2h"
+  
+  - name: cost-analysis
+    description: Calculate TCO for cloud deployments
+    dependencies:
+    - performance-testing
+    weight: 2
+    timeout: "1h"
+  
+  - name: report-generation
+    description: Generate comprehensive analysis report
+    dependencies:
+    - performance-testing
+    - feature-analysis
+    - ecosystem-research
+    - cost-analysis
+    weight: 3
+    timeout: "2h"
+  
+  timeout: "12h"
+  
+  resources:
+    maxTokens: 200000
+    maxMemory: "32Gi"
+    maxTime: "12h"
+  
+  inputs:
+    frameworks: "tensorflow,pytorch,jax,mxnet,paddlepaddle,onnx,caffe2,theano,keras,scikit-learn"
+    benchmarkDatasets: "imagenet,coco,wmt,glue"
+    targetHardware: "cpu,gpu-v100,gpu-a100,tpu-v3"
+    cloudProviders: "aws,gcp,azure"
+  
+  outputs:
+    format: markdown
+    destination:
+      type: pvc
+      name: research-reports
+      path: "/reports/ml-framework-analysis.md"
+  
+  monitoring:
+    collectMetrics: true
+    logLevel: info
+    tracing: true
+
+---
+# Example: Incident response task
+apiVersion: flow.claude.ai/v1alpha1
+kind: Task
+metadata:
+  name: investigate-outage
+  namespace: operations
+  labels:
+    type: incident
+    severity: critical
+spec:
+  description: |
+    CRITICAL: Production API experiencing 50% error rate
+    - Identify root cause
+    - Implement immediate mitigation
+    - Deploy hotfix if needed
+    - Document incident timeline
+  
+  swarmRef:
+    name: incident-response-swarm
+    namespace: operations
+  
+  priority: critical
+  strategy: sequential  # Ordered investigation
+  maxAgents: 8
+  
+  requiredCapabilities:
+  - log-analysis
+  - debugging
+  - system-administration
+  - incident-response
+  
+  preferredAgentTypes:
+  - monitor
+  - analyst
+  - coder
+  - coordinator
+  
+  subtasks:
+  - name: initial-triage
+    description: Gather metrics and identify affected services
+    weight: 1
+    timeout: "10m"
+  
+  - name: log-analysis
+    description: Analyze error logs and traces
+    dependencies:
+    - initial-triage
+    weight: 2
+    timeout: "20m"
+  
+  - name: root-cause-analysis
+    description: Identify root cause of failures
+    dependencies:
+    - log-analysis
+    weight: 3
+    timeout: "30m"
+  
+  - name: mitigation-plan
+    description: Develop immediate mitigation strategy
+    dependencies:
+    - root-cause-analysis
+    weight: 2
+    timeout: "15m"
+  
+  - name: implement-fix
+    description: Implement and test hotfix
+    dependencies:
+    - mitigation-plan
+    weight: 3
+    timeout: "45m"
+  
+  - name: deploy-fix
+    description: Deploy fix to production
+    dependencies:
+    - implement-fix
+    weight: 1
+    timeout: "15m"
+  
+  - name: verify-resolution
+    description: Verify issue is resolved
+    dependencies:
+    - deploy-fix
+    weight: 1
+    timeout: "10m"
+  
+  - name: incident-report
+    description: Create detailed incident report
+    dependencies:
+    - verify-resolution
+    weight: 2
+    timeout: "30m"
+  
+  timeout: "3h"  # Critical incident SLA
+  
+  retryPolicy:
+    maxRetries: 0  # No retries for incidents
+  
+  resources:
+    maxTokens: 50000
+    maxMemory: "8Gi"
+    maxTime: "3h"
+  
+  inputs:
+    incidentId: "INC-2024-001"
+    affectedService: "payment-api"
+    errorRate: "50%"
+    startTime: "2024-01-15T10:30:00Z"
+    logsLocation: "s3://logs/production/payment-api/"
+    metricsEndpoint: "http://prometheus:9090"
+  
+  outputs:
+    format: json
+    destination:
+      type: secret
+      name: incident-report-inc-2024-001
+  
+  monitoring:
+    collectMetrics: true
+    logLevel: debug  # Maximum verbosity
+    tracing: true
+    alerts:
+    - condition: "task_duration > 2h"
+      threshold: "2h"
+      action: notify

@@ -1,0 +1,84 @@
+#!/bin/bash
+
+# Simple kubectl plugin for swarm management
+# Place this in your PATH as 'kubectl-swarm' to use as: kubectl swarm <command>
+
+set -e
+
+COMMAND=$1
+shift
+
+case $COMMAND in
+    "list"|"ls")
+        echo "🐝 Listing all swarms:"
+        kubectl get swarmclusters -A
+        ;;
+    "status")
+        if [ -z "$1" ]; then
+            echo "Usage: kubectl swarm status <swarm-name>"
+            exit 1
+        fi
+        echo "📊 Status of swarm '$1':"
+        kubectl describe swarmcluster $1
+        ;;
+    "create")
+        if [ -z "$1" ]; then
+            echo "Usage: kubectl swarm create <swarm-name> [topology]"
+            exit 1
+        fi
+        NAME=$1
+        TOPOLOGY=${2:-mesh}
+        echo "🚀 Creating swarm '$NAME' with topology '$TOPOLOGY'..."
+        kubectl apply -f - <<EOF
+apiVersion: swarm.claudeflow.io/v1alpha1
+kind: SwarmCluster
+metadata:
+  name: $NAME
+spec:
+  topology: $TOPOLOGY
+  agentCount: 3
+  agentTemplate:
+    type: researcher
+    resources:
+      requests:
+        cpu: "100m"
+        memory: "128Mi"
+EOF
+        ;;
+    "delete")
+        if [ -z "$1" ]; then
+            echo "Usage: kubectl swarm delete <swarm-name>"
+            exit 1
+        fi
+        echo "🗑️  Deleting swarm '$1'..."
+        kubectl delete swarmcluster $1
+        ;;
+    "scale")
+        if [ -z "$1" ] || [ -z "$2" ]; then
+            echo "Usage: kubectl swarm scale <swarm-name> <agent-count>"
+            exit 1
+        fi
+        echo "⚖️  Scaling swarm '$1' to $2 agents..."
+        kubectl scale swarmcluster $1 --replicas=$2
+        ;;
+    "tasks")
+        echo "📋 Listing all tasks:"
+        kubectl get swarmtasks -A
+        ;;
+    *)
+        echo "kubectl swarm - Manage Claude Flow swarms in Kubernetes"
+        echo ""
+        echo "Commands:"
+        echo "  list, ls     List all swarms"
+        echo "  status       Show status of a swarm"
+        echo "  create       Create a new swarm"
+        echo "  delete       Delete a swarm"
+        echo "  scale        Scale a swarm"
+        echo "  tasks        List all tasks"
+        echo ""
+        echo "Examples:"
+        echo "  kubectl swarm create my-swarm mesh"
+        echo "  kubectl swarm status my-swarm"
+        echo "  kubectl swarm scale my-swarm 5"
+        ;;
+esac

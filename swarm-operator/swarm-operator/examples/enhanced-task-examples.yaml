@@ -1,0 +1,329 @@
+# Example 1: Simple Terraform Task
+---
+apiVersion: swarm.claudeflow.io/v1alpha1
+kind: SwarmTask
+metadata:
+  name: terraform-simple
+  namespace: default
+spec:
+  task: |
+    echo "🚀 Running Terraform"
+    cd /workspace
+    
+    # Create a simple Terraform configuration
+    cat > main.tf << 'EOF'
+    terraform {
+      required_version = ">= 1.0"
+    }
+    
+    output "message" {
+      value = "Hello from Terraform in Kubernetes!"
+    }
+    EOF
+    
+    terraform init
+    terraform apply -auto-approve
+    terraform output -json > /swarm-state/output.json
+    
+    echo "✅ Terraform execution complete"
+  executorImage: claudeflow/swarm-executor:2.0.0
+  persistentVolumes:
+  - name: workspace
+    mountPath: /workspace
+    size: 1Gi
+
+---
+# Example 2: Multi-Secret Mounting
+apiVersion: swarm.claudeflow.io/v1alpha1
+kind: SwarmTask
+metadata:
+  name: multi-secret-demo
+  namespace: default
+spec:
+  task: |
+    echo "🔐 Demonstrating multi-secret access"
+    
+    # List all mounted secrets
+    echo "📁 Mounted secret directories:"
+    find /secrets -type d -mindepth 1 -maxdepth 2
+    
+    # Access specific secrets (without printing sensitive data)
+    if [ -f "/secrets/db/username" ]; then
+      echo "✅ Database credentials available"
+    fi
+    
+    if [ -f "/secrets/api/openai.txt" ]; then
+      echo "✅ OpenAI API key available"
+    fi
+    
+    if [ -f "/credentials/gcp/key.json" ]; then
+      echo "✅ GCP credentials available"
+      gcloud auth list
+    fi
+    
+    echo "🎉 Secret verification complete"
+  executorImage: claudeflow/swarm-executor:2.0.0
+  additionalSecrets:
+  - name: database-credentials
+    mountPath: /secrets/db
+  - name: api-keys
+    mountPath: /secrets/api
+    items:
+    - key: openai_key
+      path: openai.txt
+    - key: anthropic_key
+      path: anthropic.txt
+
+---
+# Example 3: Kubectl Operations
+apiVersion: swarm.claudeflow.io/v1alpha1
+kind: SwarmTask
+metadata:
+  name: kubectl-operations
+  namespace: default
+spec:
+  task: |
+    echo "☸️ Kubernetes operations demo"
+    
+    # Get cluster info
+    echo "📊 Cluster Information:"
+    kubectl cluster-info
+    kubectl get nodes
+    
+    # Create a test namespace
+    kubectl create namespace swarm-test || true
+    
+    # Deploy a simple app
+    kubectl create deployment nginx --image=nginx:latest -n swarm-test
+    kubectl expose deployment nginx --port=80 --type=ClusterIP -n swarm-test
+    
+    # Wait for deployment
+    kubectl wait --for=condition=available --timeout=60s deployment/nginx -n swarm-test
+    
+    # Get pod logs
+    echo "📜 Pod logs:"
+    kubectl logs -l app=nginx -n swarm-test --tail=10
+    
+    # Cleanup
+    kubectl delete namespace swarm-test
+    
+    echo "✅ Kubernetes operations complete"
+  executorImage: claudeflow/swarm-executor:2.0.0
+  serviceAccountName: swarm-executor
+
+---
+# Example 4: GCloud with Alpha Components
+apiVersion: swarm.claudeflow.io/v1alpha1
+kind: SwarmTask
+metadata:
+  name: gcloud-alpha-demo
+  namespace: default
+spec:
+  task: |
+    echo "☁️ Google Cloud SDK with Alpha components"
+    
+    # List available gcloud components
+    echo "📦 Available components:"
+    gcloud components list --filter="state.name=Installed"
+    
+    # Use alpha command
+    echo "🔧 Using gcloud alpha commands:"
+    gcloud alpha --version
+    
+    # Example: List AI Platform models (alpha)
+    gcloud alpha ai models list --region=us-central1 || echo "No models found"
+    
+    # Example: Use Cloud Run alpha features
+    gcloud alpha run services list --platform=managed --region=us-central1
+    
+    # Example: Use Anthos alpha commands
+    gcloud alpha anthos --help
+    
+    echo "✅ GCloud alpha demo complete"
+  executorImage: claudeflow/swarm-executor:2.0.0
+  additionalSecrets:
+  - name: gcp-credentials
+    mountPath: /credentials/gcp
+
+---
+# Example 5: Persistent Volume with Resume
+apiVersion: swarm.claudeflow.io/v1alpha1
+kind: SwarmTask
+metadata:
+  name: resumable-data-processing
+  namespace: default
+spec:
+  task: |
+    echo "📊 Resumable data processing task"
+    
+    # Check if resuming
+    if [ "$RESUME_FROM_STEP" != "" ]; then
+      echo "📂 Resuming from step: $RESUME_FROM_STEP"
+    fi
+    
+    # Step 1: Generate data
+    if [ "$RESUME_FROM_STEP" == "" ] || [ "$RESUME_FROM_STEP" == "start" ]; then
+      echo "📝 Generating test data..."
+      mkdir -p /data/input
+      for i in {1..100}; do
+        echo "Data line $i: $(date +%s%N)" > /data/input/file_$i.txt
+      done
+      /scripts/checkpoint.sh save "data-generated" '{"files": 100}'
+    fi
+    
+    # Step 2: Process data
+    if [ "$RESUME_FROM_STEP" != "data-processed" ]; then
+      echo "⚙️ Processing data..."
+      mkdir -p /data/output
+      for file in /data/input/*.txt; do
+        # Simulate processing
+        cat $file | tr '[:lower:]' '[:upper:]' > /data/output/$(basename $file .txt)_processed.txt
+      done
+      /scripts/checkpoint.sh save "data-processed" '{"status": "complete"}'
+    fi
+    
+    # Step 3: Generate report
+    echo "📈 Generating report..."
+    echo "Processing Report" > /data/report.txt
+    echo "=================" >> /data/report.txt
+    echo "Input files: $(ls -1 /data/input | wc -l)" >> /data/report.txt
+    echo "Output files: $(ls -1 /data/output | wc -l)" >> /data/report.txt
+    echo "Total size: $(du -sh /data)" >> /data/report.txt
+    
+    cat /data/report.txt
+    echo "✅ Processing complete!"
+  executorImage: claudeflow/swarm-executor:2.0.0
+  resume: true
+  persistentVolumes:
+  - name: data
+    mountPath: /data
+    size: 10Gi
+  - name: state
+    mountPath: /swarm-state
+    size: 1Gi
+
+---
+# Example 6: Resource Limits and Node Selection
+apiVersion: swarm.claudeflow.io/v1alpha1
+kind: SwarmTask
+metadata:
+  name: resource-demo
+  namespace: default
+spec:
+  task: |
+    echo "💻 Resource usage demonstration"
+    
+    # Show current resources
+    echo "📊 Container resources:"
+    cat /proc/meminfo | grep MemTotal
+    nproc
+    
+    # CPU stress test
+    echo "🔥 Running CPU stress test..."
+    python3 -c "
+    import multiprocessing
+    import time
+    
+    def cpu_burn():
+        while True:
+            _ = 2 ** 100
+    
+    # Use half the available CPUs
+    num_processes = multiprocessing.cpu_count() // 2
+    print(f'Starting {num_processes} CPU burn processes...')
+    
+    processes = []
+    for i in range(num_processes):
+        p = multiprocessing.Process(target=cpu_burn)
+        p.start()
+        processes.append(p)
+    
+    # Run for 10 seconds
+    time.sleep(10)
+    
+    # Terminate processes
+    for p in processes:
+        p.terminate()
+    
+    print('CPU stress test complete')
+    "
+    
+    # Memory allocation test
+    echo "💾 Testing memory allocation..."
+    python3 -c "
+    import numpy as np
+    
+    # Allocate 1GB of memory
+    size = 1024 * 1024 * 1024 // 8  # 1GB of float64
+    arr = np.random.random(size)
+    print(f'Allocated {arr.nbytes / 1024 / 1024 / 1024:.2f} GB of memory')
+    
+    # Perform some operations
+    result = np.sum(arr)
+    print(f'Sum: {result}')
+    "
+    
+    echo "✅ Resource demo complete"
+  executorImage: claudeflow/swarm-executor:2.0.0
+  resources:
+    requests:
+      cpu: "1"
+      memory: "2Gi"
+    limits:
+      cpu: "2"
+      memory: "4Gi"
+  nodeSelector:
+    node-type: compute
+  tolerations:
+  - key: "workload"
+    operator: "Equal"
+    value: "compute"
+    effect: "NoSchedule"
+
+---
+# Example 7: Claude Flow CLI Integration
+apiVersion: swarm.claudeflow.io/v1alpha1
+kind: SwarmTask
+metadata:
+  name: claude-flow-integration
+  namespace: default
+spec:
+  task: |
+    echo "🐝 Claude Flow CLI Integration Demo"
+    
+    # Check claude-flow installation
+    echo "📦 Claude Flow version:"
+    claude-flow --version || npm install -g claude-flow
+    
+    # Initialize a swarm using MCP
+    echo "🚀 Initializing Claude Flow swarm..."
+    claude-flow mcp start || true
+    
+    # Use Claude Flow swarm tools
+    echo "🛠️ Using swarm tools:"
+    cat > task.js << 'EOF'
+    console.log("Task: Analyze this code and suggest improvements");
+    
+    function fibonacci(n) {
+      if (n <= 1) return n;
+      return fibonacci(n - 1) + fibonacci(n - 2);
+    }
+    
+    console.log("Fibonacci(10):", fibonacci(10));
+    EOF
+    
+    # Store in persistent memory
+    echo "💾 Storing in Claude Flow memory..."
+    echo "Task analysis complete" > /swarm-state/claude-flow-result.txt
+    
+    echo "✅ Claude Flow integration complete"
+  executorImage: claudeflow/swarm-executor:2.0.0
+  persistentVolumes:
+  - name: workspace
+    mountPath: /workspace
+    size: 5Gi
+  - name: state
+    mountPath: /swarm-state
+    size: 1Gi
+  environment:
+    NODE_ENV: "production"

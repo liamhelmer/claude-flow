@@ -1,0 +1,48 @@
+apiVersion: swarm.claudeflow.io/v1alpha1
+kind: SwarmCluster
+metadata:
+  name: my-first-swarm
+  namespace: default
+spec:
+  topology: mesh
+  agentCount: 3
+  agentTemplate:
+    type: researcher
+    capabilities:
+    - "data-analysis"
+    - "web-search"
+    - "report-generation"
+    resources:
+      requests:
+        cpu: "100m"
+        memory: "128Mi"
+      limits:
+        cpu: "500m"
+        memory: "512Mi"
+  taskDistribution:
+    strategy: adaptive
+    maxTasksPerAgent: 5
+  autoScaling:
+    enabled: false
+---
+apiVersion: swarm.claudeflow.io/v1alpha1
+kind: SwarmTask
+metadata:
+  name: analyze-project
+  namespace: default
+spec:
+  swarmRef: my-first-swarm
+  task: "Analyze the kubernetes operator project structure and create a summary report"
+  priority: high
+  strategy: parallel
+  timeout: "15m"
+  subtasks:
+  - name: "scan-code"
+    description: "Scan codebase for patterns"
+  - name: "analyze-architecture"
+    description: "Analyze system architecture"
+  - name: "generate-report"
+    description: "Generate final report"
+    dependencies:
+    - "scan-code"
+    - "analyze-architecture"

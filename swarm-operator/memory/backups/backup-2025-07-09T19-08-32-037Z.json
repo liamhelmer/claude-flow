@@ -1,0 +1,154 @@
+{
+  "timestamp": "2025-07-09T19:08:32.037Z",
+  "version": "1.0",
+  "entries": [
+    {
+      "id": "entry_mcwbr2uo_gyxrn2olc",
+      "key": "swarm/cli/structure",
+      "value": "Created kubectl-swarm directory structure with main.go and root command",
+      "type": "string",
+      "namespace": "default",
+      "tags": [],
+      "metadata": {},
+      "owner": "system",
+      "accessLevel": "shared",
+      "createdAt": "2025-07-09T19:00:54.960Z",
+      "updatedAt": "2025-07-09T19:00:54.960Z",
+      "lastAccessedAt": "2025-07-09T19:00:54.960Z",
+      "version": 1,
+      "size": 102,
+      "compressed": false,
+      "checksum": "b7d17d61a7388f7c0d49e7cbe55db46828d0109d0946babbc0376a3cecfaac9c",
+      "references": [],
+      "dependencies": []
+    },
+    {
+      "id": "entry_mcwbt82n_pbskunflf",
+      "key": "swarm/cli/commands",
+      "value": "Implemented create, scale, and status commands with interactive mode support",
+      "type": "string",
+      "namespace": "default",
+      "tags": [],
+      "metadata": {},
+      "owner": "system",
+      "accessLevel": "shared",
+      "createdAt": "2025-07-09T19:02:35.039Z",
+      "updatedAt": "2025-07-09T19:02:35.039Z",
+      "lastAccessedAt": "2025-07-09T19:02:35.039Z",
+      "version": 1,
+      "size": 107,
+      "compressed": false,
+      "checksum": "e70a1b3f5fae67e581bf0606ba517385bee95d0febb349a5c78c1197c98262f1",
+      "references": [],
+      "dependencies": []
+    },
+    {
+      "id": "entry_mcwbx6ep_fy8xip9vi",
+      "key": "swarm/cli/commands-extended",
+      "value": "Implemented task, logs, and debug commands with advanced features",
+      "type": "string",
+      "namespace": "default",
+      "tags": [],
+      "metadata": {},
+      "owner": "system",
+      "accessLevel": "shared",
+      "createdAt": "2025-07-09T19:05:39.505Z",
+      "updatedAt": "2025-07-09T19:05:39.505Z",
+      "lastAccessedAt": "2025-07-09T19:05:39.505Z",
+      "version": 1,
+      "size": 96,
+      "compressed": false,
+      "checksum": "b489c57227d9f80092b44d4639c073081dda07eef8e9cecefe284edc32481a4b",
+      "references": [],
+      "dependencies": []
+    },
+    {
+      "id": "entry_mcwc0vj8_udrcqualc",
+      "key": "swarm/cli/packages",
+      "value": "Implemented client, printer, and util packages with comprehensive features",
+      "type": "string",
+      "namespace": "default",
+      "tags": [],
+      "metadata": {},
+      "owner": "system",
+      "accessLevel": "shared",
+      "createdAt": "2025-07-09T19:08:32.036Z",
+      "updatedAt": "2025-07-09T19:08:32.036Z",
+      "lastAccessedAt": "2025-07-09T19:08:32.036Z",
+      "version": 1,
+      "size": 105,
+      "compressed": false,
+      "checksum": "7663445297ea9bc124377537eb1863678a27b844a3c5c1a76e95cf85ad9f3ecc",
+      "references": [],
+      "dependencies": []
+    }
+  ],
+  "statistics": {
+    "overview": {
+      "totalEntries": 4,
+      "totalSize": 410,
+      "compressedEntries": 0,
+      "compressionRatio": 1,
+      "indexSize": 200,
+      "memoryUsage": 9101216,
+      "diskUsage": 0
+    },
+    "distribution": {
+      "byNamespace": {
+        "default": {
+          "count": 4,
+          "size": 410
+        }
+      },
+      "byType": {
+        "string": {
+          "count": 4,
+          "size": 410
+        }
+      },
+      "byOwner": {
+        "system": {
+          "count": 4,
+          "size": 410
+        }
+      },
+      "byAccessLevel": {
+        "shared": {
+          "count": 4,
+          "size": 410
+        }
+      }
+    },
+    "temporal": {
+      "entriesCreatedLast24h": 4,
+      "entriesUpdatedLast24h": 4,
+      "entriesAccessedLast24h": 4,
+      "oldestEntry": "2025-07-09T19:00:54.960Z",
+      "newestEntry": "2025-07-09T19:08:32.036Z"
+    },
+    "performance": {
+      "averageQueryTime": 0,
+      "averageWriteTime": 0,
+      "cacheHitRatio": 0,
+      "indexEfficiency": 0.95
+    },
+    "health": {
+      "expiredEntries": 0,
+      "orphanedReferences": 0,
+      "duplicateKeys": 0,
+      "corruptedEntries": 0,
+      "recommendedCleanup": false
+    },
+    "optimization": {
+      "suggestions": [],
+      "potentialSavings": {
+        "compression": 0,
+        "cleanup": 0,
+        "deduplication": 0
+      },
+      "indexOptimization": [
+        "Consider periodic index rebuilding for optimal performance"
+      ]
+    }
+  }
+}

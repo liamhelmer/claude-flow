@@ -1,0 +1,352 @@
+---
+# Example 1: Multi-Cloud Infrastructure Deployment
+apiVersion: swarm.claudeflow.io/v1alpha1
+kind: SwarmTask
+metadata:
+  name: multi-cloud-infrastructure
+  namespace: default
+spec:
+  task: "Deploy infrastructure across GCP, AWS, and Azure using Terraform"
+  swarmRef: production-swarm
+  priority: critical
+  strategy: adaptive
+  timeout: 2h
+  config:
+    executorImage: claude-flow/swarm-executor:latest
+    additionalSecrets:
+    - name: terraform-backend-config
+      mountPath: /terraform/backend
+    - name: cloud-provider-configs
+      mountPath: /configs/providers
+    - name: ssh-keys
+      mountPath: /home/swarm-user/.ssh
+      optional: true
+    persistentVolumes:
+    - name: terraform-state
+      mountPath: /terraform/state
+      storageClass: fast-ssd
+      size: 50Gi
+    - name: terraform-modules
+      mountPath: /terraform/modules
+      size: 20Gi
+    resources:
+      requests:
+        cpu: "2"
+        memory: "4Gi"
+      limits:
+        cpu: "4"
+        memory: "8Gi"
+    environment:
+    - name: TF_VAR_project_name
+      value: "claude-flow-production"
+    - name: TF_VAR_environment
+      value: "production"
+    - name: TERRAFORM_VERSION
+      value: "1.7.0"
+---
+# Example 2: Large-Scale Data Processing with Checkpoints
+apiVersion: swarm.claudeflow.io/v1alpha1
+kind: SwarmTask
+metadata:
+  name: data-processing-pipeline
+  namespace: default
+spec:
+  task: "Process and analyze 10TB dataset with ML models"
+  swarmRef: data-processing-swarm
+  priority: high
+  strategy: parallel
+  timeout: 24h
+  resume: true  # Enable task resumption
+  config:
+    executorImage: claude-flow/swarm-executor:latest
+    additionalSecrets:
+    - name: gcs-service-account
+      mountPath: /secrets/gcp
+    - name: ml-model-credentials
+      mountPath: /secrets/ml
+    persistentVolumes:
+    - name: dataset-storage
+      mountPath: /data
+      storageClass: standard
+      size: 500Gi
+    - name: checkpoint-storage
+      mountPath: /swarm-state
+      storageClass: fast-ssd
+      size: 100Gi
+    - name: results-storage
+      mountPath: /results
+      size: 200Gi
+    resources:
+      requests:
+        cpu: "8"
+        memory: "32Gi"
+      limits:
+        cpu: "16"
+        memory: "64Gi"
+    environment:
+    - name: DATASET_PATH
+      value: "/data/raw"
+    - name: OUTPUT_PATH
+      value: "/results/processed"
+    - name: CHECKPOINT_INTERVAL
+      value: "1000"
+    - name: PARALLELISM
+      value: "16"
+---
+# Example 3: CI/CD Pipeline Orchestration
+apiVersion: swarm.claudeflow.io/v1alpha1
+kind: SwarmTask
+metadata:
+  name: cicd-pipeline-execution
+  namespace: default
+spec:
+  task: "Execute full CI/CD pipeline for microservices deployment"
+  swarmRef: cicd-swarm
+  priority: high
+  strategy: sequential
+  timeout: 1h
+  config:
+    executorImage: claude-flow/swarm-executor:latest
+    additionalSecrets:
+    - name: docker-registry-creds
+      mountPath: /root/.docker
+    - name: kubeconfig-prod
+      mountPath: /root/.kube
+    - name: sonarqube-token
+      mountPath: /secrets/sonar
+    - name: artifactory-creds
+      mountPath: /secrets/artifactory
+    persistentVolumes:
+    - name: build-cache
+      mountPath: /cache
+      storageClass: local-ssd
+      size: 100Gi
+    - name: artifacts
+      mountPath: /artifacts
+      size: 50Gi
+    resources:
+      requests:
+        cpu: "4"
+        memory: "8Gi"
+      limits:
+        cpu: "8"
+        memory: "16Gi"
+    environment:
+    - name: BUILD_NUMBER
+      value: "$(date +%Y%m%d%H%M%S)"
+    - name: REGISTRY_URL
+      value: "gcr.io/your-project"
+    - name: CLUSTER_NAME
+      value: "production-cluster"
+    - name: HELM_VERSION
+      value: "3.14.0"
+---
+# Example 4: Security Scanning and Compliance
+apiVersion: swarm.claudeflow.io/v1alpha1
+kind: SwarmTask
+metadata:
+  name: security-compliance-scan
+  namespace: default
+spec:
+  task: "Comprehensive security scan and compliance audit across all cloud resources"
+  swarmRef: security-swarm
+  priority: critical
+  strategy: parallel
+  timeout: 4h
+  config:
+    executorImage: claude-flow/swarm-executor:latest
+    additionalSecrets:
+    - name: security-scanner-license
+      mountPath: /licenses
+    - name: compliance-policies
+      mountPath: /policies
+    - name: notification-webhooks
+      mountPath: /secrets/webhooks
+    persistentVolumes:
+    - name: scan-results
+      mountPath: /results
+      storageClass: encrypted-ssd
+      size: 100Gi
+    - name: vulnerability-db
+      mountPath: /var/lib/vulndb
+      size: 50Gi
+    resources:
+      requests:
+        cpu: "4"
+        memory: "8Gi"
+      limits:
+        cpu: "8"
+        memory: "16Gi"
+    environment:
+    - name: SCAN_TARGETS
+      value: "aws,gcp,azure,kubernetes"
+    - name: COMPLIANCE_FRAMEWORKS
+      value: "CIS,PCI-DSS,HIPAA,SOC2"
+    - name: REPORT_FORMAT
+      value: "json,html,pdf"
+    - name: SEVERITY_THRESHOLD
+      value: "medium"
+---
+# Example 5: Database Migration with Rollback Support
+apiVersion: swarm.claudeflow.io/v1alpha1
+kind: SwarmTask
+metadata:
+  name: database-migration
+  namespace: default
+spec:
+  task: "Migrate production database from PostgreSQL 13 to 15 with zero downtime"
+  swarmRef: database-swarm
+  priority: critical
+  strategy: sequential
+  timeout: 6h
+  resume: true
+  config:
+    executorImage: claude-flow/swarm-executor:latest
+    additionalSecrets:
+    - name: database-credentials
+      mountPath: /secrets/db
+    - name: backup-storage-creds
+      mountPath: /secrets/backup
+    - name: monitoring-api-keys
+      mountPath: /secrets/monitoring
+    persistentVolumes:
+    - name: migration-workspace
+      mountPath: /workspace
+      storageClass: fast-ssd
+      size: 500Gi
+    - name: backup-storage
+      mountPath: /backups
+      storageClass: standard
+      size: 1000Gi
+    - name: migration-logs
+      mountPath: /logs
+      size: 50Gi
+    resources:
+      requests:
+        cpu: "4"
+        memory: "16Gi"
+      limits:
+        cpu: "8"
+        memory: "32Gi"
+    environment:
+    - name: SOURCE_DB_HOST
+      valueFrom:
+        secretKeyRef:
+          name: database-credentials
+          key: source-host
+    - name: TARGET_DB_HOST
+      valueFrom:
+        secretKeyRef:
+          name: database-credentials
+          key: target-host
+    - name: MIGRATION_BATCH_SIZE
+      value: "10000"
+    - name: ENABLE_CHECKPOINTS
+      value: "true"
+    - name: CHECKPOINT_INTERVAL
+      value: "5m"
+---
+# Example 6: Machine Learning Model Training and Deployment
+apiVersion: swarm.claudeflow.io/v1alpha1
+kind: SwarmTask
+metadata:
+  name: ml-model-training
+  namespace: default
+spec:
+  task: "Train and deploy computer vision model on distributed GPU cluster"
+  swarmRef: ml-swarm
+  priority: high
+  strategy: parallel
+  timeout: 48h
+  resume: true
+  config:
+    executorImage: claude-flow/swarm-executor:gpu-latest  # GPU-enabled executor
+    additionalSecrets:
+    - name: wandb-api-key
+      mountPath: /secrets/wandb
+    - name: model-registry-creds
+      mountPath: /secrets/registry
+    - name: dataset-access-keys
+      mountPath: /secrets/datasets
+    persistentVolumes:
+    - name: training-data
+      mountPath: /data
+      storageClass: fast-ssd
+      size: 2000Gi
+    - name: model-checkpoints
+      mountPath: /checkpoints
+      storageClass: fast-ssd
+      size: 500Gi
+    - name: tensorboard-logs
+      mountPath: /logs/tensorboard
+      size: 100Gi
+    resources:
+      requests:
+        cpu: "16"
+        memory: "64Gi"
+        nvidia.com/gpu: "4"  # Request 4 GPUs
+      limits:
+        cpu: "32"
+        memory: "128Gi"
+        nvidia.com/gpu: "4"
+    environment:
+    - name: MODEL_ARCHITECTURE
+      value: "resnet50"
+    - name: BATCH_SIZE
+      value: "256"
+    - name: LEARNING_RATE
+      value: "0.001"
+    - name: NUM_EPOCHS
+      value: "100"
+    - name: DISTRIBUTED_TRAINING
+      value: "true"
+    - name: WANDB_PROJECT
+      value: "claude-flow-cv"
+---
+# Example 7: Disaster Recovery Test
+apiVersion: swarm.claudeflow.io/v1alpha1
+kind: SwarmTask
+metadata:
+  name: disaster-recovery-test
+  namespace: default
+spec:
+  task: "Execute comprehensive disaster recovery drill across all systems"
+  swarmRef: dr-swarm
+  priority: critical
+  strategy: sequential
+  timeout: 8h
+  config:
+    executorImage: claude-flow/swarm-executor:latest
+    additionalSecrets:
+    - name: dr-automation-keys
+      mountPath: /secrets/dr
+    - name: backup-encryption-keys
+      mountPath: /secrets/encryption
+    - name: monitoring-credentials
+      mountPath: /secrets/monitoring
+    persistentVolumes:
+    - name: dr-workspace
+      mountPath: /workspace
+      storageClass: fast-ssd
+      size: 200Gi
+    - name: test-results
+      mountPath: /results
+      size: 100Gi
+    resources:
+      requests:
+        cpu: "8"
+        memory: "16Gi"
+      limits:
+        cpu: "16"
+        memory: "32Gi"
+    environment:
+    - name: DR_SCENARIO
+      value: "full-region-failure"
+    - name: TARGET_RTO
+      value: "15m"
+    - name: TARGET_RPO
+      value: "5m"
+    - name: SYSTEMS_TO_TEST
+      value: "database,api,frontend,storage,messaging"
+    - name: ROLLBACK_ON_FAILURE
+      value: "true"

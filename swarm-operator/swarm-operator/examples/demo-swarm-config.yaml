@@ -1,0 +1,23 @@
+# This ConfigMap simulates a swarm configuration for the demo operator
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: demo-swarm-mesh
+  namespace: swarm-system
+  labels:
+    swarm.claudeflow.io/type: swarm-config
+data:
+  topology: "mesh"
+  agents: "5"
+  config: |
+    {
+      "name": "demo-swarm-mesh",
+      "topology": "mesh",
+      "agents": [
+        {"id": "agent-1", "type": "researcher"},
+        {"id": "agent-2", "type": "coder"},
+        {"id": "agent-3", "type": "analyst"},
+        {"id": "agent-4", "type": "tester"},
+        {"id": "agent-5", "type": "coordinator"}
+      ]
+    }

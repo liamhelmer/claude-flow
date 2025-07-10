@@ -1,0 +1,502 @@
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  name: tasks.flow.claude.ai
+  annotations:
+    controller-gen.kubebuilder.io/version: v0.14.0
+spec:
+  group: flow.claude.ai
+  names:
+    kind: Task
+    listKind: TaskList
+    plural: tasks
+    singular: task
+    shortNames:
+    - tk
+    categories:
+    - claude-flow
+    - ai
+  scope: Namespaced
+  versions:
+  - name: v1alpha1
+    served: true
+    storage: true
+    additionalPrinterColumns:
+    - jsonPath: .spec.priority
+      name: Priority
+      type: string
+      priority: 1
+    - jsonPath: .spec.swarmRef.name
+      name: Swarm
+      type: string
+    - jsonPath: .status.phase
+      name: Phase
+      type: string
+    - jsonPath: .status.progress
+      name: Progress
+      type: string
+    - jsonPath: .status.assignedAgents
+      name: Agents
+      type: integer
+    - jsonPath: .spec.strategy
+      name: Strategy
+      type: string
+      priority: 1
+    - jsonPath: .status.startTime
+      name: Started
+      type: date
+    - jsonPath: .status.completionTime
+      name: Completed
+      type: date
+      priority: 1
+    schema:
+      openAPIV3Schema:
+        description: Task is the Schema for the tasks API
+        type: object
+        properties:
+          apiVersion:
+            description: 'APIVersion defines the versioned schema of this representation of an object.'
+            type: string
+          kind:
+            description: 'Kind is a string value representing the REST resource this object represents.'
+            type: string
+          metadata:
+            type: object
+          spec:
+            description: TaskSpec defines the desired state of Task
+            type: object
+            required:
+            - description
+            - swarmRef
+            properties:
+              description:
+                description: Task description or instructions
+                type: string
+                minLength: 1
+              swarmRef:
+                description: Reference to the Swarm that will execute this task
+                type: object
+                required:
+                - name
+                properties:
+                  name:
+                    description: Name of the Swarm resource
+                    type: string
+                  namespace:
+                    description: Namespace of the Swarm (defaults to task's namespace)
+                    type: string
+              priority:
+                description: Task priority
+                type: string
+                enum:
+                - low
+                - medium
+                - high
+                - critical
+                default: medium
+              strategy:
+                description: Execution strategy
+                type: string
+                enum:
+                - parallel
+                - sequential
+                - adaptive
+                - balanced
+                default: adaptive
+              maxAgents:
+                description: Maximum number of agents to assign
+                type: integer
+                minimum: 1
+                maximum: 100
+                default: 5
+              requiredCapabilities:
+                description: Required agent capabilities
+                type: array
+                items:
+                  type: string
+              preferredAgentTypes:
+                description: Preferred agent types for this task
+                type: array
+                items:
+                  type: string
+                  enum:
+                  - coordinator
+                  - researcher
+                  - coder
+                  - analyst
+                  - architect
+                  - tester
+                  - reviewer
+                  - optimizer
+                  - documenter
+                  - monitor
+                  - specialist
+              subtasks:
+                description: Subtask definitions for complex workflows
+                type: array
+                items:
+                  type: object
+                  required:
+                  - name
+                  - description
+                  properties:
+                    name:
+                      description: Subtask name
+                      type: string
+                    description:
+                      description: Subtask description
+                      type: string
+                    dependencies:
+                      description: Names of subtasks this depends on
+                      type: array
+                      items:
+                        type: string
+                    requiredCapabilities:
+                      description: Specific capabilities needed
+                      type: array
+                      items:
+                        type: string
+                    weight:
+                      description: Relative weight for progress calculation
+                      type: integer
+                      minimum: 1
+                      default: 1
+                    timeout:
+                      description: Timeout for this subtask
+                      type: string
+                      pattern: '^[0-9]+[smh]$'
+              dependencies:
+                description: Dependencies on other tasks
+                type: array
+                items:
+                  type: object
+                  required:
+                  - taskName
+                  properties:
+                    taskName:
+                      description: Name of the dependent task
+                      type: string
+                    namespace:
+                      description: Namespace of the dependent task
+                      type: string
+                    waitForStatus:
+                      description: Status to wait for
+                      type: string
+                      enum:
+                      - Completed
+                      - Failed
+                      - Any
+                      default: Completed
+              timeout:
+                description: Overall task timeout
+                type: string
+                pattern: '^[0-9]+[smhd]$'
+                default: "24h"
+              retryPolicy:
+                description: Retry policy for failed executions
+                type: object
+                properties:
+                  maxRetries:
+                    description: Maximum number of retries
+                    type: integer
+                    minimum: 0
+                    maximum: 10
+                    default: 3
+                  backoffMultiplier:
+                    description: Backoff multiplier for retries
+                    type: number
+                    minimum: 1
+                    maximum: 10
+                    default: 2
+                  retryableErrors:
+                    description: Error types that trigger retry
+                    type: array
+                    items:
+                      type: string
+              resources:
+                description: Resource constraints for the task
+                type: object
+                properties:
+                  maxTokens:
+                    description: Maximum tokens to use
+                    type: integer
+                    minimum: 100
+                  maxMemory:
+                    description: Maximum memory for all agents
+                    type: string
+                    pattern: '^[0-9]+[KMGT]i$'
+                  maxTime:
+                    description: Maximum execution time
+                    type: string
+                    pattern: '^[0-9]+[smhd]$'
+              inputs:
+                description: Input data for the task
+                type: object
+                additionalProperties:
+                  type: string
+              outputs:
+                description: Expected output specifications
+                type: object
+                properties:
+                  format:
+                    description: Output format
+                    type: string
+                    enum:
+                    - json
+                    - yaml
+                    - markdown
+                    - text
+                    - binary
+                    default: json
+                  destination:
+                    description: Output destination
+                    type: object
+                    properties:
+                      type:
+                        type: string
+                        enum:
+                        - configmap
+                        - secret
+                        - pvc
+                        - s3
+                        - inline
+                        default: inline
+                      name:
+                        type: string
+                      path:
+                        type: string
+              scheduling:
+                description: Task scheduling preferences
+                type: object
+                properties:
+                  nodeSelector:
+                    description: Node selector for agent pods
+                    type: object
+                    additionalProperties:
+                      type: string
+                  tolerations:
+                    description: Tolerations for agent pods
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        key:
+                          type: string
+                        operator:
+                          type: string
+                        value:
+                          type: string
+                        effect:
+                          type: string
+                  affinity:
+                    description: Affinity rules
+                    type: object
+              monitoring:
+                description: Task-specific monitoring configuration
+                type: object
+                properties:
+                  collectMetrics:
+                    description: Collect detailed metrics
+                    type: boolean
+                    default: true
+                  logLevel:
+                    description: Log level for this task
+                    type: string
+                    enum:
+                    - debug
+                    - info
+                    - warn
+                    - error
+                    default: info
+                  tracing:
+                    description: Enable distributed tracing
+                    type: boolean
+                    default: true
+                  alerts:
+                    description: Alert configurations
+                    type: array
+                    items:
+                      type: object
+                      required:
+                      - condition
+                      - action
+                      properties:
+                        condition:
+                          type: string
+                        threshold:
+                          type: string
+                        action:
+                          type: string
+                          enum:
+                          - notify
+                          - scale
+                          - retry
+                          - abort
+          status:
+            description: TaskStatus defines the observed state of Task
+            type: object
+            properties:
+              phase:
+                description: Current phase of the task
+                type: string
+                enum:
+                - Pending
+                - Assigning
+                - Running
+                - Completing
+                - Completed
+                - Failed
+                - Cancelled
+              progress:
+                description: Overall progress percentage
+                type: string
+              startTime:
+                description: Task start time
+                type: string
+                format: date-time
+              completionTime:
+                description: Task completion time
+                type: string
+                format: date-time
+              assignedAgents:
+                description: Number of agents assigned
+                type: integer
+              agentAssignments:
+                description: Detailed agent assignments
+                type: array
+                items:
+                  type: object
+                  properties:
+                    agentName:
+                      type: string
+                    agentType:
+                      type: string
+                    subtask:
+                      type: string
+                    status:
+                      type: string
+                    startTime:
+                      type: string
+                      format: date-time
+                    progress:
+                      type: integer
+              subtaskStatus:
+                description: Status of individual subtasks
+                type: array
+                items:
+                  type: object
+                  properties:
+                    name:
+                      type: string
+                    status:
+                      type: string
+                    progress:
+                      type: integer
+                    assignedAgent:
+                      type: string
+                    startTime:
+                      type: string
+                      format: date-time
+                    completionTime:
+                      type: string
+                      format: date-time
+                    error:
+                      type: string
+              results:
+                description: Task execution results
+                type: object
+                properties:
+                  summary:
+                    description: Result summary
+                    type: string
+                  data:
+                    description: Result data (format depends on output spec)
+                    type: object
+                    x-kubernetes-preserve-unknown-fields: true
+                  artifacts:
+                    description: Generated artifacts
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        name:
+                          type: string
+                        type:
+                          type: string
+                        location:
+                          type: string
+                        size:
+                          type: string
+                  metrics:
+                    description: Execution metrics
+                    type: object
+                    properties:
+                      duration:
+                        type: string
+                      tokensUsed:
+                        type: integer
+                      memoryPeak:
+                        type: string
+                      cpuSeconds:
+                        type: number
+              errors:
+                description: Errors encountered during execution
+                type: array
+                items:
+                  type: object
+                  properties:
+                    timestamp:
+                      type: string
+                      format: date-time
+                    agent:
+                      type: string
+                    subtask:
+                      type: string
+                    error:
+                      type: string
+                    recoverable:
+                      type: boolean
+              retryCount:
+                description: Number of retries attempted
+                type: integer
+              conditions:
+                description: Current service state of task
+                type: array
+                items:
+                  type: object
+                  required:
+                  - type
+                  - status
+                  - lastTransitionTime
+                  properties:
+                    type:
+                      description: Type of condition
+                      type: string
+                    status:
+                      description: Status of the condition
+                      type: string
+                    lastTransitionTime:
+                      description: Last time the condition transitioned
+                      type: string
+                      format: date-time
+                    reason:
+                      description: Unique, one-word, CamelCase reason
+                      type: string
+                    message:
+                      description: Human-readable message
+                      type: string
+              observedGeneration:
+                description: The generation observed by the controller
+                type: integer
+    subresources:
+      status: {}
+  conversion:
+    strategy: Webhook
+    webhook:
+      clientConfig:
+        service:
+          name: claude-flow-webhook-service
+          namespace: system
+          path: /convert
+      conversionReviewVersions:
+      - v1

@@ -1,0 +1,299 @@
+# Auto-scaling Swarm Example
+# This creates a swarm with horizontal pod autoscaling based on CPU and custom metrics
+apiVersion: swarm.cloudflow.io/v1alpha1
+kind: Swarm
+metadata:
+  name: autoscaling-swarm
+  namespace: default
+  labels:
+    app: example
+    feature: autoscaling
+spec:
+  # Star topology - central coordinator with worker agents
+  topology: star
+  
+  # Maximum agents (will scale between min and max)
+  maxAgents: 20
+  
+  # Adaptive strategy for dynamic workloads
+  strategy: adaptive
+  
+  # Auto-scaling configuration
+  autoscaling:
+    enabled: true
+    minAgents: 3
+    maxAgents: 20
+    
+    # CPU-based scaling
+    targetCPUUtilization: 70
+    
+    # Memory-based scaling
+    targetMemoryUtilization: 80
+    
+    # Custom metrics for scaling
+    metrics:
+      - type: Pods
+        metric:
+          name: pending_tasks
+          selector:
+            matchLabels:
+              swarm: autoscaling-swarm
+        target:
+          type: AverageValue
+          averageValue: "5"
+      
+      - type: Pods
+        metric:
+          name: task_queue_length
+          selector:
+            matchLabels:
+              swarm: autoscaling-swarm
+        target:
+          type: AverageValue
+          averageValue: "10"
+    
+    # Scaling behavior
+    behavior:
+      scaleDown:
+        stabilizationWindowSeconds: 300
+        policies:
+        - type: Percent
+          value: 50
+          periodSeconds: 60
+        - type: Pods
+          value: 2
+          periodSeconds: 60
+        selectPolicy: Min
+      
+      scaleUp:
+        stabilizationWindowSeconds: 60
+        policies:
+        - type: Percent
+          value: 100
+          periodSeconds: 30
+        - type: Pods
+          value: 4
+          periodSeconds: 30
+        selectPolicy: Max
+  
+  # Resource configuration with vertical scaling
+  resources:
+    requests:
+      cpu: "100m"
+      memory: "128Mi"
+    limits:
+      cpu: "1000m"
+      memory: "1Gi"
+  
+  # Vertical Pod Autoscaling
+  verticalScaling:
+    enabled: true
+    updateMode: Auto
+    resourcePolicy:
+      containerPolicies:
+      - containerName: agent
+        minAllowed:
+          cpu: "50m"
+          memory: "64Mi"
+        maxAllowed:
+          cpu: "2000m"
+          memory: "2Gi"
+  
+  # Agent template with scaling annotations
+  agentTemplate:
+    metadata:
+      labels:
+        swarm-type: autoscaling
+      annotations:
+        # Prometheus annotations for metrics
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "8080"
+        prometheus.io/path: "/metrics"
+    spec:
+      capabilities:
+        - elastic-compute
+        - queue-processing
+        - stream-processing
+      
+      # Readiness and liveness probes for better scaling decisions
+      readinessProbe:
+        httpGet:
+          path: /ready
+          port: 8080
+        initialDelaySeconds: 10
+        periodSeconds: 5
+        successThreshold: 1
+        failureThreshold: 3
+      
+      livenessProbe:
+        httpGet:
+          path: /health
+          port: 8080
+        initialDelaySeconds: 30
+        periodSeconds: 10
+        timeoutSeconds: 5
+        failureThreshold: 3
+      
+      # Startup probe for slow-starting agents
+      startupProbe:
+        httpGet:
+          path: /startup
+          port: 8080
+        initialDelaySeconds: 0
+        periodSeconds: 10
+        timeoutSeconds: 1
+        successThreshold: 1
+        failureThreshold: 30
+  
+  # Queue configuration for task buffering
+  queueConfig:
+    # Maximum queue size
+    maxSize: 1000
+    # Queue type
+    type: priority
+    # Overflow handling
+    overflowPolicy: reject
+    # Task timeout in queue
+    taskTimeout: 600s
+  
+  # Monitoring for scaling decisions
+  monitoring:
+    enabled: true
+    # Custom metrics server
+    metricsServer:
+      enabled: true
+      port: 8080
+    # Metrics to expose
+    customMetrics:
+      - name: pending_tasks
+        help: "Number of tasks waiting to be processed"
+        type: gauge
+      - name: task_queue_length
+        help: "Current length of the task queue"
+        type: gauge
+      - name: processing_time_seconds
+        help: "Time taken to process tasks"
+        type: histogram
+      - name: task_completion_total
+        help: "Total number of completed tasks"
+        type: counter
+
+---
+# HorizontalPodAutoscaler for the swarm
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: autoscaling-swarm-hpa
+  namespace: default
+spec:
+  scaleTargetRef:
+    apiVersion: swarm.cloudflow.io/v1alpha1
+    kind: Swarm
+    name: autoscaling-swarm
+  minReplicas: 3
+  maxReplicas: 20
+  metrics:
+  - type: Resource
+    resource:
+      name: cpu
+      target:
+        type: Utilization
+        averageUtilization: 70
+  - type: Resource
+    resource:
+      name: memory
+      target:
+        type: Utilization
+        averageUtilization: 80
+  - type: Pods
+    pods:
+      metric:
+        name: pending_tasks
+      target:
+        type: AverageValue
+        averageValue: "5"
+  behavior:
+    scaleDown:
+      stabilizationWindowSeconds: 300
+      policies:
+      - type: Percent
+        value: 50
+        periodSeconds: 60
+    scaleUp:
+      stabilizationWindowSeconds: 60
+      policies:
+      - type: Percent
+        value: 100
+        periodSeconds: 30
+
+---
+# VerticalPodAutoscaler for resource optimization
+apiVersion: autoscaling.k8s.io/v1
+kind: VerticalPodAutoscaler
+metadata:
+  name: autoscaling-swarm-vpa
+  namespace: default
+spec:
+  targetRef:
+    apiVersion: swarm.cloudflow.io/v1alpha1
+    kind: Swarm
+    name: autoscaling-swarm
+  updatePolicy:
+    updateMode: "Auto"
+  resourcePolicy:
+    containerPolicies:
+    - containerName: agent
+      minAllowed:
+        cpu: 50m
+        memory: 64Mi
+      maxAllowed:
+        cpu: 2
+        memory: 2Gi
+
+---
+# Example Task that triggers auto-scaling
+apiVersion: swarm.cloudflow.io/v1alpha1
+kind: Task
+metadata:
+  name: load-test-task
+  namespace: default
+spec:
+  swarmRef:
+    name: autoscaling-swarm
+  
+  description: "High-load task to demonstrate auto-scaling"
+  priority: high
+  strategy: parallel
+  
+  # Request many agents to trigger scale-up
+  maxAgents: 15
+  
+  # Simulate long-running task
+  timeout: 1800s
+  
+  # Load simulation configuration
+  config:
+    workload:
+      type: "cpu-intensive"
+      duration: "10m"
+      targetCPU: 80
+    parallelism: 15
+    taskCount: 100
+
+---
+# ServiceMonitor for Prometheus integration
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: autoscaling-swarm-metrics
+  namespace: default
+  labels:
+    swarm: autoscaling-swarm
+spec:
+  selector:
+    matchLabels:
+      swarm: autoscaling-swarm
+  endpoints:
+  - port: metrics
+    interval: 30s
+    path: /metrics

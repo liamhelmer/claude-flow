@@ -1,0 +1,343 @@
+---
+# Namespace for the swarm operator
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: swarm-system
+---
+# Service Account
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: swarm-operator
+  namespace: swarm-system
+---
+# ClusterRole with necessary permissions
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: swarm-operator
+rules:
+# Core resources
+- apiGroups: [""]
+  resources: ["pods", "services", "endpoints", "persistentvolumeclaims", "events", "configmaps", "secrets", "namespaces"]
+  verbs: ["*"]
+- apiGroups: [""]
+  resources: ["pods/log", "pods/exec"]
+  verbs: ["get", "list"]
+# Batch resources
+- apiGroups: ["batch"]
+  resources: ["jobs", "cronjobs"]
+  verbs: ["*"]
+# Apps resources
+- apiGroups: ["apps"]
+  resources: ["deployments", "daemonsets", "replicasets", "statefulsets"]
+  verbs: ["*"]
+# Custom resources
+- apiGroups: ["swarm.claudeflow.io"]
+  resources: ["swarmclusters", "swarmtasks", "agents"]
+  verbs: ["*"]
+- apiGroups: ["swarm.claudeflow.io"]
+  resources: ["swarmclusters/status", "swarmtasks/status", "agents/status"]
+  verbs: ["get", "update", "patch"]
+# Storage resources
+- apiGroups: ["storage.k8s.io"]
+  resources: ["storageclasses"]
+  verbs: ["get", "list"]
+---
+# ClusterRoleBinding
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: swarm-operator
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: swarm-operator
+subjects:
+- kind: ServiceAccount
+  name: swarm-operator
+  namespace: swarm-system
+---
+# ConfigMap for task scripts
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: swarm-task-scripts
+  namespace: default
+data:
+  task.sh: |
+    #!/bin/bash
+    set -e
+
+    echo "===================================="
+    echo "Claude Flow Enhanced Swarm Task"
+    echo "===================================="
+    echo "Task: ${TASK_NAME}"
+    echo "Priority: ${PRIORITY}"
+    echo "Operator Version: ${SWARM_OPERATOR_VERSION}"
+    echo "Timestamp: $(date)"
+    echo "===================================="
+
+    # Function to save checkpoint
+    save_checkpoint() {
+      if [ -d "/swarm-state" ]; then
+        echo "{\"step\": \"$1\", \"timestamp\": \"$(date -Iseconds)\", \"data\": $2}" > /swarm-state/checkpoint.json
+        echo "Checkpoint saved at step: $1"
+      fi
+    }
+
+    # Function to load checkpoint
+    load_checkpoint() {
+      if [ -f "/swarm-state/checkpoint.json" ]; then
+        export CHECKPOINT_DATA=$(cat /swarm-state/checkpoint.json)
+        export LAST_STEP=$(echo "$CHECKPOINT_DATA" | jq -r '.step // "0"')
+        echo "Loaded checkpoint from step: $LAST_STEP"
+        return 0
+      fi
+      export LAST_STEP="0"
+      return 1
+    }
+
+    # Check for checkpoint if resuming
+    if load_checkpoint; then
+      echo "Resuming from checkpoint..."
+    fi
+
+    # Display available tools
+    echo ""
+    echo "Available Tools:"
+    echo "----------------"
+    command -v kubectl >/dev/null 2>&1 && echo "✓ kubectl $(kubectl version --client --short 2>/dev/null | head -1)"
+    command -v terraform >/dev/null 2>&1 && echo "✓ terraform $(terraform version -json 2>/dev/null | jq -r .terraform_version)"
+    command -v gcloud >/dev/null 2>&1 && echo "✓ gcloud $(gcloud version --format='value(version)' 2>/dev/null | head -1)"
+    command -v aws >/dev/null 2>&1 && echo "✓ aws $(aws --version)"
+    command -v az >/dev/null 2>&1 && echo "✓ az $(az version --query '"azure-cli"' -o tsv)"
+    command -v git >/dev/null 2>&1 && echo "✓ git $(git --version | cut -d' ' -f3)"
+    command -v docker >/dev/null 2>&1 && echo "✓ docker $(docker --version | cut -d' ' -f3 | tr -d ',')"
+    command -v helm >/dev/null 2>&1 && echo "✓ helm $(helm version --short)"
+    command -v python3 >/dev/null 2>&1 && echo "✓ python $(python3 --version | cut -d' ' -f2)"
+    command -v node >/dev/null 2>&1 && echo "✓ node $(node --version)"
+    command -v go >/dev/null 2>&1 && echo "✓ go $(go version | cut -d' ' -f3)"
+    echo ""
+
+    # Check mounted secrets
+    echo "Checking mounted secrets:"
+    echo "------------------------"
+    [ -d "/secrets" ] && find /secrets -type f 2>/dev/null | head -10 || echo "No additional secrets mounted"
+    echo ""
+
+    # Check persistent volumes
+    echo "Checking persistent volumes:"
+    echo "---------------------------"
+    df -h | grep -E "(^Filesystem|/workspace|/swarm-state|/cache)" || echo "No persistent volumes mounted"
+    echo ""
+
+    # Main task execution
+    echo "Executing task..."
+    echo "================="
+
+    # Parse task type and execute accordingly
+    case "$TASK_NAME" in
+      *"terraform"*|*"infrastructure"*)
+        echo "Detected infrastructure task"
+        if command -v terraform >/dev/null 2>&1; then
+          terraform version
+          # Add your terraform logic here
+        fi
+        ;;
+      
+      *"kubernetes"*|*"k8s"*|*"deploy"*)
+        echo "Detected Kubernetes task"
+        if command -v kubectl >/dev/null 2>&1; then
+          kubectl version --client
+          kubectl cluster-info
+          # Add your kubernetes logic here
+        fi
+        ;;
+      
+      *"gcp"*|*"google"*)
+        echo "Detected GCP task"
+        if command -v gcloud >/dev/null 2>&1; then
+          gcloud info
+          # Add your GCP logic here
+        fi
+        ;;
+      
+      *"aws"*|*"amazon"*)
+        echo "Detected AWS task"
+        if command -v aws >/dev/null 2>&1; then
+          aws sts get-caller-identity || echo "AWS credentials not configured"
+          # Add your AWS logic here
+        fi
+        ;;
+      
+      *"azure"*|*"microsoft"*)
+        echo "Detected Azure task"
+        if command -v az >/dev/null 2>&1; then
+          az account show || echo "Azure credentials not configured"
+          # Add your Azure logic here
+        fi
+        ;;
+      
+      *"github"*|*"git"*)
+        echo "Detected Git/GitHub task"
+        git config --global user.email "swarm@claudeflow.io"
+        git config --global user.name "Claude Flow Swarm"
+        # Add your git logic here
+        ;;
+      
+      *)
+        echo "Generic task execution"
+        echo "Task details: $TASK_NAME"
+        # Add your generic task logic here
+        ;;
+    esac
+
+    # Save final checkpoint
+    save_checkpoint "completed" "{\"status\": \"success\", \"completedAt\": \"$(date -Iseconds)\"}"
+
+    echo ""
+    echo "===================================="
+    echo "Task completed successfully!"
+    echo "===================================="
+---
+# Deployment
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: swarm-operator
+  namespace: swarm-system
+  labels:
+    app: swarm-operator
+    version: enhanced-v0.5.0
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: swarm-operator
+  template:
+    metadata:
+      labels:
+        app: swarm-operator
+        version: enhanced-v0.5.0
+    spec:
+      serviceAccountName: swarm-operator
+      containers:
+      - name: operator
+        image: claude-flow/swarm-operator:enhanced-v0.5.0
+        imagePullPolicy: Always
+        env:
+        - name: EXECUTOR_IMAGE
+          value: "claude-flow/swarm-executor:latest"
+        - name: ENABLE_PERSISTENCE
+          value: "true"
+        - name: DEFAULT_STORAGE_CLASS
+          value: "standard"
+        - name: NAMESPACE
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.namespace
+        - name: POD_NAME
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.name
+        ports:
+        - name: http
+          containerPort: 8080
+          protocol: TCP
+        livenessProbe:
+          httpGet:
+            path: /healthz
+            port: http
+          initialDelaySeconds: 10
+          periodSeconds: 30
+        readinessProbe:
+          httpGet:
+            path: /readyz
+            port: http
+          initialDelaySeconds: 5
+          periodSeconds: 10
+        resources:
+          requests:
+            cpu: 100m
+            memory: 128Mi
+          limits:
+            cpu: 500m
+            memory: 512Mi
+        securityContext:
+          allowPrivilegeEscalation: false
+          readOnlyRootFilesystem: true
+          runAsNonRoot: true
+          runAsUser: 65534
+          capabilities:
+            drop:
+            - ALL
+---
+# Service for operator metrics
+apiVersion: v1
+kind: Service
+metadata:
+  name: swarm-operator
+  namespace: swarm-system
+  labels:
+    app: swarm-operator
+spec:
+  selector:
+    app: swarm-operator
+  ports:
+  - name: http
+    port: 8080
+    targetPort: http
+    protocol: TCP
+---
+# PodDisruptionBudget for high availability
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: swarm-operator
+  namespace: swarm-system
+spec:
+  minAvailable: 1
+  selector:
+    matchLabels:
+      app: swarm-operator
+---
+# NetworkPolicy for security
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: swarm-operator
+  namespace: swarm-system
+spec:
+  podSelector:
+    matchLabels:
+      app: swarm-operator
+  policyTypes:
+  - Ingress
+  - Egress
+  ingress:
+  - from:
+    - namespaceSelector:
+        matchLabels:
+          name: kube-system
+    ports:
+    - protocol: TCP
+      port: 8080
+  egress:
+  - to:
+    - namespaceSelector: {}
+    ports:
+    - protocol: TCP
+      port: 443
+    - protocol: TCP
+      port: 6443  # Kubernetes API
+  - to:
+    - namespaceSelector:
+        matchLabels:
+          name: kube-system
+    ports:
+    - protocol: TCP
+      port: 53
+    - protocol: UDP
+      port: 53

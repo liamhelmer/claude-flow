@@ -1,0 +1,295 @@
+# Example: Hierarchical swarm for complex application development
+apiVersion: flow.claude.ai/v1alpha1
+kind: Swarm
+metadata:
+  name: app-dev-swarm
+  namespace: default
+  labels:
+    purpose: application-development
+    team: platform
+spec:
+  topology: hierarchical
+  maxAgents: 12
+  minAgents: 3
+  strategy: adaptive
+  
+  agentSpecs:
+  - type: coordinator
+    replicas: 1
+    capabilities:
+    - project-management
+    - task-distribution
+    - progress-tracking
+    resources:
+      memory: "1Gi"
+      cpu: "1000m"
+  
+  - type: architect
+    replicas: 2
+    capabilities:
+    - system-design
+    - api-design
+    - database-modeling
+    resources:
+      memory: "768Mi"
+      cpu: "750m"
+  
+  - type: coder
+    replicas: 4
+    capabilities:
+    - backend-development
+    - frontend-development
+    - api-implementation
+    resources:
+      memory: "512Mi"
+      cpu: "500m"
+  
+  - type: tester
+    replicas: 2
+    capabilities:
+    - unit-testing
+    - integration-testing
+    - performance-testing
+    resources:
+      memory: "512Mi"
+      cpu: "500m"
+  
+  - type: analyst
+    replicas: 2
+    capabilities:
+    - code-analysis
+    - performance-profiling
+    - security-scanning
+    resources:
+      memory: "768Mi"
+      cpu: "750m"
+      gpu:
+        enabled: true
+        count: 1
+        type: "nvidia-t4"
+  
+  - type: documenter
+    replicas: 1
+    capabilities:
+    - api-documentation
+    - user-guides
+    - architecture-docs
+    resources:
+      memory: "256Mi"
+      cpu: "250m"
+  
+  performance:
+    enableWASM: true
+    enableSIMD: true
+    neuralAcceleration: true
+    cacheSize: "512Mi"
+  
+  memory:
+    enabled: true
+    backend: redis
+    ttl: "72h"
+    encryption: true
+  
+  communication:
+    protocol: grpc
+    encryption: true
+    compression: true
+    timeout: "45s"
+  
+  scaling:
+    enabled: true
+    metrics:
+    - type: taskQueue
+      threshold: 80
+      scaleUp: 2
+      scaleDown: 1
+    - type: cpu
+      threshold: 75
+      scaleUp: 1
+      scaleDown: 1
+    - type: responseTime
+      threshold: 90
+      scaleUp: 3
+      scaleDown: 1
+    cooldownPeriod: "90s"
+  
+  monitoring:
+    prometheus: true
+    openTelemetry: true
+    logLevel: info
+
+---
+# Example: Mesh swarm for research and analysis
+apiVersion: flow.claude.ai/v1alpha1
+kind: Swarm
+metadata:
+  name: research-swarm
+  namespace: research
+  labels:
+    purpose: distributed-research
+spec:
+  topology: mesh
+  maxAgents: 20
+  minAgents: 5
+  strategy: parallel
+  
+  agentSpecs:
+  - type: researcher
+    replicas: 10
+    capabilities:
+    - literature-review
+    - data-collection
+    - hypothesis-testing
+    resources:
+      memory: "2Gi"
+      cpu: "1000m"
+  
+  - type: analyst
+    replicas: 5
+    capabilities:
+    - statistical-analysis
+    - data-visualization
+    - pattern-recognition
+    resources:
+      memory: "4Gi"
+      cpu: "2000m"
+      gpu:
+        enabled: true
+        count: 1
+        type: "nvidia-v100"
+  
+  - type: coordinator
+    replicas: 2
+    capabilities:
+    - result-aggregation
+    - consensus-building
+    resources:
+      memory: "1Gi"
+      cpu: "500m"
+  
+  - type: reviewer
+    replicas: 3
+    capabilities:
+    - peer-review
+    - quality-assurance
+    - validation
+    resources:
+      memory: "1Gi"
+      cpu: "500m"
+  
+  performance:
+    enableWASM: true
+    enableSIMD: true
+    neuralAcceleration: true
+    cacheSize: "2Gi"
+  
+  memory:
+    enabled: true
+    backend: persistent-volume
+    ttl: "30d"
+    encryption: true
+  
+  communication:
+    protocol: grpc
+    encryption: true
+    compression: true
+    timeout: "120s"
+  
+  scaling:
+    enabled: true
+    metrics:
+    - type: taskQueue
+      threshold: 70
+      scaleUp: 5
+      scaleDown: 2
+    cooldownPeriod: "180s"
+
+---
+# Example: Star topology for centralized coordination
+apiVersion: flow.claude.ai/v1alpha1
+kind: Swarm
+metadata:
+  name: incident-response-swarm
+  namespace: operations
+  labels:
+    purpose: incident-management
+    priority: critical
+spec:
+  topology: star
+  maxAgents: 8
+  minAgents: 4
+  strategy: sequential
+  
+  agentSpecs:
+  - type: coordinator
+    replicas: 1
+    capabilities:
+    - incident-triage
+    - task-assignment
+    - status-tracking
+    resources:
+      memory: "2Gi"
+      cpu: "2000m"
+  
+  - type: monitor
+    replicas: 2
+    capabilities:
+    - log-analysis
+    - metric-analysis
+    - anomaly-detection
+    resources:
+      memory: "1Gi"
+      cpu: "1000m"
+  
+  - type: analyst
+    replicas: 2
+    capabilities:
+    - root-cause-analysis
+    - impact-assessment
+    resources:
+      memory: "1Gi"
+      cpu: "1000m"
+  
+  - type: coder
+    replicas: 2
+    capabilities:
+    - hotfix-development
+    - patch-deployment
+    resources:
+      memory: "512Mi"
+      cpu: "500m"
+  
+  - type: documenter
+    replicas: 1
+    capabilities:
+    - incident-reporting
+    - postmortem-writing
+    resources:
+      memory: "256Mi"
+      cpu: "250m"
+  
+  performance:
+    enableWASM: true
+    enableSIMD: false
+    neuralAcceleration: false
+    cacheSize: "256Mi"
+  
+  memory:
+    enabled: true
+    backend: inmemory
+    ttl: "24h"
+    encryption: false
+  
+  communication:
+    protocol: http
+    encryption: true
+    compression: false
+    timeout: "10s"
+  
+  scaling:
+    enabled: false  # Fixed size for incident response
+  
+  monitoring:
+    prometheus: true
+    openTelemetry: true
+    logLevel: debug  # Higher verbosity for incidents
