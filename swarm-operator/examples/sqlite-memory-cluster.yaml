@@ -56,7 +56,7 @@ spec:
   
   # Agent template
   agentTemplate:
-    image: "claudeflow/swarm-executor:latest"
+    image: "liamhelmer/swarm-executor:2.0.0"
     capabilities:
       - code-analysis
       - pattern-recognition

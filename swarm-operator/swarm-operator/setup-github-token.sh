@@ -36,16 +36,58 @@ fi
 
 echo "✅ Token valid for user: $USERNAME"
 
+# Ensure namespace exists
+echo "📁 Ensuring swarm-system namespace exists..."
+kubectl create namespace swarm-system --dry-run=client -o yaml | kubectl apply -f -
+
 # Create the secret
 echo "🔐 Creating Kubernetes secret..."
 kubectl create secret generic github-credentials \
     --from-literal=username="$USERNAME" \
     --from-literal=token="$GITHUB_TOKEN" \
     --from-literal=email="$USERNAME@users.noreply.github.com" \
-    --namespace=default \
+    --namespace=swarm-system \
     --dry-run=client -o yaml | kubectl apply -f -
 
 echo "✅ Secret created successfully!"
+
+# Create RBAC for cross-namespace access
+echo "🔓 Setting up RBAC for cross-namespace access..."
+kubectl apply -f - <<EOF
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: github-secret-reader
+  namespace: swarm-system
+rules:
+- apiGroups: [""]
+  resources: ["secrets"]
+  resourceNames: ["github-credentials", "github-app-key"]
+  verbs: ["get", "list"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: swarm-agents-github-access
+  namespace: swarm-system
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: github-secret-reader
+subjects:
+- kind: ServiceAccount
+  name: swarm-agent
+  namespace: claude-flow-swarm
+- kind: ServiceAccount
+  name: swarm-agent
+  namespace: claude-flow-hivemind
+- kind: ServiceAccount
+  name: mcp-server
+  namespace: claude-flow-swarm
+EOF
+
+echo "✅ RBAC configured for cross-namespace secret access"
 
 # Also export for current session
 export GITHUB_TOKEN="$GITHUB_TOKEN"

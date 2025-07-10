@@ -9,7 +9,7 @@ apiVersion: v1
 kind: ConfigMap
 metadata:
   name: swarm-executor-scripts
-  namespace: default
+  namespace: swarm-system
 data:
   entrypoint.sh: |
     #!/bin/bash
@@ -191,7 +191,7 @@ spec:
       serviceAccountName: swarm-operator
       containers:
       - name: operator
-        image: claudeflow/swarm-operator:2.0.0
+        image: liamhelmer/swarm-operator:2.0.0
         imagePullPolicy: Always
         command: ["/swarm-operator"]
         env:

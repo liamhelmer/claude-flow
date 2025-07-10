@@ -11,24 +11,25 @@ kubectl create secret generic github-credentials \
     --from-literal=username="liamhelmer" \
     --from-literal=token="ghp_PLACEHOLDER_TOKEN" \
     --from-literal=email="liamhelmer@users.noreply.github.com" \
-    --namespace=default \
+    --namespace=swarm-system \
     --dry-run=client -o yaml | kubectl apply -f -
 
 # Create Claude placeholder secret
 kubectl create secret generic claude-credentials \
     --from-literal=api_key="sk-placeholder" \
     --from-literal=model="claude-3-opus-20240229" \
-    --namespace=default \
+    --namespace=swarm-system \
     --dry-run=client -o yaml | kubectl apply -f -
 
 echo "✅ Placeholder secrets created"
 echo ""
 echo "To update with real GitHub token later:"
-echo "kubectl edit secret github-credentials"
+echo "kubectl edit secret github-credentials -n swarm-system"
 echo ""
 echo "Or delete and recreate:"
-echo "kubectl delete secret github-credentials"
+echo "kubectl delete secret github-credentials -n swarm-system"
 echo "kubectl create secret generic github-credentials \\"
 echo "  --from-literal=username=liamhelmer \\"
 echo "  --from-literal=token=YOUR_REAL_TOKEN \\"
-echo "  --from-literal=email=your-email@example.com"
+echo "  --from-literal=email=your-email@example.com \\"
+echo "  --namespace=swarm-system"

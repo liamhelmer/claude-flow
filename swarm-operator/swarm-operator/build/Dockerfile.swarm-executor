@@ -1,5 +1,6 @@
 # Enhanced Swarm Executor Image with Cloud Tools
-FROM alpine:3.19
+# Multi-platform build support
+FROM --platform=$TARGETPLATFORM alpine:3.19
 
 # Install base dependencies
 RUN apk add --no-cache \
@@ -44,32 +45,56 @@ RUN apk add --no-cache \
 # Install Node.js
 RUN apk add --no-cache nodejs npm yarn
 
-# Install Go
+# Install Go (platform-aware)
 ENV GO_VERSION=1.22.0
-RUN wget https://go.dev/dl/go${GO_VERSION}.linux-amd64.tar.gz && \
-    tar -C /usr/local -xzf go${GO_VERSION}.linux-amd64.tar.gz && \
-    rm go${GO_VERSION}.linux-amd64.tar.gz
+RUN ARCH=$(uname -m) && \
+    case $ARCH in \
+        x86_64) GO_ARCH="amd64" ;; \
+        aarch64) GO_ARCH="arm64" ;; \
+        *) echo "Unsupported architecture: $ARCH" && exit 1 ;; \
+    esac && \
+    wget https://go.dev/dl/go${GO_VERSION}.linux-${GO_ARCH}.tar.gz && \
+    tar -C /usr/local -xzf go${GO_VERSION}.linux-${GO_ARCH}.tar.gz && \
+    rm go${GO_VERSION}.linux-${GO_ARCH}.tar.gz
 ENV PATH="/usr/local/go/bin:${PATH}"
 ENV GOPATH="/go"
 ENV PATH="${GOPATH}/bin:${PATH}"
 
-# Install kubectl
-RUN curl -LO "https://dl.k8s.io/release/$(curl -L -s https://dl.k8s.io/release/stable.txt)/bin/linux/amd64/kubectl" && \
+# Install kubectl (platform-aware)
+RUN ARCH=$(uname -m) && \
+    case $ARCH in \
+        x86_64) KUBECTL_ARCH="amd64" ;; \
+        aarch64) KUBECTL_ARCH="arm64" ;; \
+        *) echo "Unsupported architecture: $ARCH" && exit 1 ;; \
+    esac && \
+    curl -LO "https://dl.k8s.io/release/$(curl -L -s https://dl.k8s.io/release/stable.txt)/bin/linux/${KUBECTL_ARCH}/kubectl" && \
     chmod +x kubectl && \
     mv kubectl /usr/local/bin/
 
-# Install Terraform
+# Install Terraform (platform-aware)
 ENV TERRAFORM_VERSION=1.7.0
-RUN wget https://releases.hashicorp.com/terraform/${TERRAFORM_VERSION}/terraform_${TERRAFORM_VERSION}_linux_amd64.zip && \
-    unzip terraform_${TERRAFORM_VERSION}_linux_amd64.zip && \
+RUN ARCH=$(uname -m) && \
+    case $ARCH in \
+        x86_64) TF_ARCH="amd64" ;; \
+        aarch64) TF_ARCH="arm64" ;; \
+        *) echo "Unsupported architecture: $ARCH" && exit 1 ;; \
+    esac && \
+    wget https://releases.hashicorp.com/terraform/${TERRAFORM_VERSION}/terraform_${TERRAFORM_VERSION}_linux_${TF_ARCH}.zip && \
+    unzip terraform_${TERRAFORM_VERSION}_linux_${TF_ARCH}.zip && \
     mv terraform /usr/local/bin/ && \
-    rm terraform_${TERRAFORM_VERSION}_linux_amd64.zip
+    rm terraform_${TERRAFORM_VERSION}_linux_${TF_ARCH}.zip
 
-# Install Google Cloud SDK with ALL components
+# Install Google Cloud SDK with ALL components (platform-aware)
 RUN apk add --no-cache python3 py3-crcmod bash libc6-compat && \
-    curl -O https://dl.google.com/dl/cloudsdk/channels/rapid/downloads/google-cloud-cli-linux-x86_64.tar.gz && \
-    tar -xf google-cloud-cli-linux-x86_64.tar.gz && \
-    rm google-cloud-cli-linux-x86_64.tar.gz && \
+    ARCH=$(uname -m) && \
+    case $ARCH in \
+        x86_64) GCLOUD_ARCH="x86_64" ;; \
+        aarch64) GCLOUD_ARCH="arm" ;; \
+        *) echo "Unsupported architecture: $ARCH" && exit 1 ;; \
+    esac && \
+    curl -O https://dl.google.com/dl/cloudsdk/channels/rapid/downloads/google-cloud-cli-linux-${GCLOUD_ARCH}.tar.gz && \
+    tar -xf google-cloud-cli-linux-${GCLOUD_ARCH}.tar.gz && \
+    rm google-cloud-cli-linux-${GCLOUD_ARCH}.tar.gz && \
     ./google-cloud-sdk/install.sh --quiet --path-update true --bash-completion true --rc-path /root/.bashrc && \
     ./google-cloud-sdk/bin/gcloud config set core/disable_usage_reporting true && \
     ./google-cloud-sdk/bin/gcloud config set component_manager/disable_update_check true && \
@@ -108,9 +133,15 @@ RUN /google-cloud-sdk/bin/gcloud components install \
 
 ENV PATH="/google-cloud-sdk/bin:${PATH}"
 
-# Install AWS CLI v2
+# Install AWS CLI v2 (platform-aware)
 RUN apk add --no-cache groff less && \
-    curl "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o "awscliv2.zip" && \
+    ARCH=$(uname -m) && \
+    case $ARCH in \
+        x86_64) AWS_ARCH="x86_64" ;; \
+        aarch64) AWS_ARCH="aarch64" ;; \
+        *) echo "Unsupported architecture: $ARCH" && exit 1 ;; \
+    esac && \
+    curl "https://awscli.amazonaws.com/awscli-exe-linux-${AWS_ARCH}.zip" -o "awscliv2.zip" && \
     unzip awscliv2.zip && \
     ./aws/install && \
     rm -rf awscliv2.zip aws/
@@ -123,10 +154,16 @@ RUN apk add --no-cache --virtual .build-deps gcc musl-dev libffi-dev openssl-dev
 # Install Helm
 RUN curl https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-3 | bash
 
-# Install additional Kubernetes tools
-RUN curl -Lo /usr/local/bin/k9s https://github.com/derailed/k9s/releases/latest/download/k9s_Linux_amd64 && \
+# Install additional Kubernetes tools (platform-aware)
+RUN ARCH=$(uname -m) && \
+    case $ARCH in \
+        x86_64) K8S_ARCH="amd64" ;; \
+        aarch64) K8S_ARCH="arm64" ;; \
+        *) echo "Unsupported architecture: $ARCH" && exit 1 ;; \
+    esac && \
+    curl -Lo /usr/local/bin/k9s https://github.com/derailed/k9s/releases/latest/download/k9s_Linux_${K8S_ARCH} && \
     chmod +x /usr/local/bin/k9s && \
-    curl -Lo /usr/local/bin/stern https://github.com/stern/stern/releases/latest/download/stern_linux_amd64 && \
+    curl -Lo /usr/local/bin/stern https://github.com/stern/stern/releases/latest/download/stern_linux_${K8S_ARCH} && \
     chmod +x /usr/local/bin/stern
 
 # Install Docker CLI (for Docker-in-Docker scenarios)

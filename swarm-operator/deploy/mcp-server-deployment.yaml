@@ -1,0 +1,219 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: claude-flow-swarm
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: mcp-server
+  namespace: claude-flow-swarm
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: mcp-server-config
+  namespace: claude-flow-swarm
+data:
+  server-config.json: |
+    {
+      "name": "claude-flow-mcp",
+      "version": "2.0.0",
+      "features": {
+        "swarm": true,
+        "memory": true,
+        "github": true,
+        "kubernetes": true
+      },
+      "memory": {
+        "type": "sqlite",
+        "path": "/data/memory/swarm-memory.db"
+      },
+      "swarm": {
+        "namespace": "claude-flow-swarm"
+      }
+    }
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: mcp-server-data
+  namespace: claude-flow-swarm
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 10Gi
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: mcp-server
+  namespace: claude-flow-swarm
+  labels:
+    app: mcp-server
+    component: server
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: mcp-server
+      component: server
+  template:
+    metadata:
+      labels:
+        app: mcp-server
+        component: server
+    spec:
+      serviceAccountName: mcp-server
+      containers:
+      - name: mcp-server
+        image: liamhelmer/claude-flow-mcp:2.0.0
+        imagePullPolicy: Always
+        ports:
+        - containerPort: 3000
+          name: http
+        - containerPort: 50051
+          name: grpc
+        env:
+        - name: NODE_ENV
+          value: "production"
+        - name: NAMESPACE
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.namespace
+        - name: POD_NAME
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.name
+        - name: MCP_MODE
+          value: "kubernetes"
+        - name: MEMORY_TYPE
+          value: "sqlite"
+        - name: MEMORY_PATH
+          value: "/data/memory/swarm-memory.db"
+        - name: GITHUB_APP_ID
+          valueFrom:
+            secretKeyRef:
+              name: github-app-config
+              key: app-id
+              optional: true
+        - name: GITHUB_APP_PRIVATE_KEY_PATH
+          value: "/secrets/github/private-key"
+        volumeMounts:
+        - name: config
+          mountPath: /config
+        - name: data
+          mountPath: /data
+        - name: github-key
+          mountPath: /secrets/github
+          readOnly: true
+        resources:
+          requests:
+            cpu: 100m
+            memory: 256Mi
+          limits:
+            cpu: 1000m
+            memory: 2Gi
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: 3000
+          initialDelaySeconds: 30
+          periodSeconds: 10
+        readinessProbe:
+          httpGet:
+            path: /ready
+            port: 3000
+          initialDelaySeconds: 10
+          periodSeconds: 5
+      volumes:
+      - name: config
+        configMap:
+          name: mcp-server-config
+      - name: data
+        persistentVolumeClaim:
+          claimName: mcp-server-data
+      - name: github-key
+        secret:
+          secretName: github-app-key
+          optional: true
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: mcp-server
+  namespace: claude-flow-swarm
+  labels:
+    app: mcp-server
+spec:
+  selector:
+    app: mcp-server
+    component: server
+  ports:
+  - name: http
+    port: 3000
+    targetPort: 3000
+  - name: grpc
+    port: 50051
+    targetPort: 50051
+  type: ClusterIP
+---
+# RBAC for MCP Server
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: mcp-server
+rules:
+# Swarm resources
+- apiGroups: ["swarm.claudeflow.io"]
+  resources: ["swarmclusters", "swarmagents", "swarmtasks", "swarmmemories", "swarmmemorystores"]
+  verbs: ["get", "list", "watch", "create", "update", "patch"]
+# Core resources
+- apiGroups: [""]
+  resources: ["pods", "services", "configmaps", "secrets"]
+  verbs: ["get", "list", "watch"]
+# Jobs for task execution
+- apiGroups: ["batch"]
+  resources: ["jobs"]
+  verbs: ["get", "list", "watch", "create", "update", "patch", "delete"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: mcp-server
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: mcp-server
+subjects:
+- kind: ServiceAccount
+  name: mcp-server
+  namespace: claude-flow-swarm
+---
+# Allow MCP server to read secrets from swarm-system namespace
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: mcp-secret-reader
+  namespace: swarm-system
+rules:
+- apiGroups: [""]
+  resources: ["secrets"]
+  resourceNames: ["github-credentials", "github-app-key"]
+  verbs: ["get", "list"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: mcp-server-secret-access
+  namespace: swarm-system
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: mcp-secret-reader
+subjects:
+- kind: ServiceAccount
+  name: mcp-server
+  namespace: claude-flow-swarm
