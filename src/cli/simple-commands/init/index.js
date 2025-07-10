@@ -234,7 +234,8 @@ export async function initCommand(subArgs, flags) {
       '.claude/commands',
       '.claude/commands/sparc',
       '.claude/commands/swarm',
-      '.claude/logs'
+      '.claude/logs',
+      '.swarm'  // Add .swarm directory for memory persistence (matching hive-mind pattern)
     ];
     
     for (const dir of directories) {
@@ -1108,7 +1109,8 @@ ${commands.map(cmd => `- [${cmd}](./${cmd}.md)`).join('\n')}
       'coordination',
       'coordination/memory_bank',
       'coordination/subtasks',
-      'coordination/orchestration'
+      'coordination/orchestration',
+      '.swarm'  // Add .swarm directory for shared memory
     ];
     
     for (const dir of standardDirs) {
@@ -1129,6 +1131,19 @@ ${commands.map(cmd => `- [${cmd}](./${cmd}.md)`).join('\n')}
       await fs.writeFile(`${workingDir}/memory/sessions/README.md`, createSessionsReadme());
       
       printSuccess('✓ Initialized memory system');
+      
+      // Initialize memory database
+      try {
+        // Import and initialize SqliteMemoryStore to create the database
+        const { SqliteMemoryStore } = await import('../../../memory/sqlite-store.js');
+        const memoryStore = new SqliteMemoryStore();
+        await memoryStore.initialize();
+        memoryStore.close();
+        printSuccess('✓ Initialized memory database (.swarm/memory.db)');
+      } catch (err) {
+        console.log(`  ⚠️  Could not initialize memory database: ${err.message}`);
+        console.log('     The database will be created on first use');
+      }
     }
     
     // Check for Claude Code and set up MCP servers (always enabled by default)
