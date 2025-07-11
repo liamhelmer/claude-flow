@@ -79,7 +79,7 @@ echo ""
 echo "📦 Step 2: Installing CRDs..."
 
 # Apply CRDs
-if kubectl apply -f swarm-operator/config/crd/bases/; then
+if kubectl apply -f deploy/all-crds.yaml; then
     echo -e "${GREEN}✅ CRDs applied successfully${NC}"
 else
     echo -e "${RED}❌ Failed to apply CRDs${NC}"
@@ -93,9 +93,10 @@ echo ""
 echo "🔐 Step 3: Setting up RBAC..."
 
 # Apply RBAC resources
-kubectl apply -f swarm-operator/config/rbac/role.yaml
-kubectl apply -f swarm-operator/config/rbac/role_binding.yaml
-kubectl apply -f swarm-operator/config/rbac/service_account.yaml
+echo "Applying RBAC resources..."
+# We'll use the enhanced RBAC from the swarm-operator directory
+kubectl apply -f swarm-operator/deploy/enhanced-rbac.yaml || true
+kubectl apply -f swarm-operator/deploy/rbac.yaml || true
 
 # Apply cross-namespace RBAC from setup script
 kubectl apply -f - <<EOF
@@ -155,8 +156,9 @@ wait_for_deployment claude-flow-swarm mcp-server
 echo ""
 echo "📝 Step 6: Creating ConfigMaps..."
 
-# Apply configmaps
-kubectl apply -f swarm-operator/deploy/github-app-script-configmap.yaml
+# Apply configmaps  
+kubectl apply -f swarm-operator/deploy/github-app-script-configmap.yaml || true
+kubectl apply -f swarm-operator/deploy/github-script-configmap.yaml || true
 
 echo -e "${GREEN}✅ ConfigMaps created${NC}"
 

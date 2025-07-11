@@ -34,7 +34,7 @@ import (
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-	swarmv1alpha1 "github.com/liamhelmer/claude-flow/swarm-operator/api/v1alpha1"
+	swarmv1alpha1 "github.com/claude-flow/swarm-operator/api/v1alpha1"
 )
 
 // SwarmMemoryStoreReconciler reconciles a SwarmMemoryStore object

@@ -1,0 +1,276 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: swarm-system
+  labels:
+    name: swarm-system
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: swarm-executor-scripts
+  namespace: swarm-system
+data:
+  entrypoint.sh: |
+    #!/bin/bash
+    # Enhanced Swarm Executor Entrypoint
+    
+    echo "🐝 Swarm Executor v2.0.0 starting..."
+    
+    # Setup cloud credentials if available
+    if [ -f "/credentials/gcp/key.json" ]; then
+        echo "🔐 Setting up Google Cloud credentials..."
+        export GOOGLE_APPLICATION_CREDENTIALS="/credentials/gcp/key.json"
+        gcloud auth activate-service-account --key-file="$GOOGLE_APPLICATION_CREDENTIALS"
+    fi
+    
+    if [ -f "/credentials/aws/credentials" ]; then
+        echo "🔐 Setting up AWS credentials..."
+        mkdir -p ~/.aws
+        cp /credentials/aws/* ~/.aws/
+    fi
+    
+    if [ -f "/credentials/azure/config" ]; then
+        echo "🔐 Setting up Azure credentials..."
+        mkdir -p ~/.azure
+        cp /credentials/azure/* ~/.azure/
+    fi
+    
+    # Setup kubectl if kubeconfig is mounted
+    if [ -f "/credentials/kubeconfig" ]; then
+        echo "🔐 Setting up kubectl..."
+        export KUBECONFIG="/credentials/kubeconfig"
+    elif [ -f "/var/run/secrets/kubernetes.io/serviceaccount/token" ]; then
+        echo "🔐 Using in-cluster Kubernetes configuration..."
+    fi
+    
+    # Check for resume mode
+    if [ "$RESUME_TASK" = "true" ] && [ -f "/swarm-state/checkpoint.json" ]; then
+        echo "📂 Resuming from checkpoint..."
+        /scripts/resume.sh
+    fi
+    
+    # Execute the command
+    exec "$@"
+  
+  checkpoint.sh: |
+    #!/bin/bash
+    # Checkpoint management for swarm tasks
+    
+    CHECKPOINT_DIR="/swarm-state"
+    CHECKPOINT_FILE="$CHECKPOINT_DIR/checkpoint.json"
+    
+    # Function to save checkpoint
+    save_checkpoint() {
+        local step=$1
+        local data=$2
+        
+        echo "💾 Saving checkpoint at step: $step"
+        
+        # Create checkpoint JSON
+        cat > "$CHECKPOINT_FILE" << EOF
+    {
+      "timestamp": "$(date -u +"%Y-%m-%dT%H:%M:%SZ")",
+      "step": "$step",
+      "data": $data,
+      "environment": {
+        "task_name": "$TASK_NAME",
+        "swarm_id": "$SWARM_ID",
+        "pwd": "$(pwd)",
+        "git_branch": "$(git branch --show-current 2>/dev/null || echo 'none')"
+      }
+    }
+    EOF
+        
+        # Also save workspace state
+        if [ -d "/workspace" ]; then
+            tar -czf "$CHECKPOINT_DIR/workspace-$step.tar.gz" -C /workspace .
+        fi
+        
+        echo "✅ Checkpoint saved"
+    }
+    
+    # Function to load checkpoint
+    load_checkpoint() {
+        if [ ! -f "$CHECKPOINT_FILE" ]; then
+            echo "❌ No checkpoint found"
+            return 1
+        fi
+        
+        echo "📂 Loading checkpoint..."
+        cat "$CHECKPOINT_FILE"
+        
+        # Extract step
+        local step=$(jq -r '.step' "$CHECKPOINT_FILE")
+        
+        # Restore workspace if exists
+        if [ -f "$CHECKPOINT_DIR/workspace-$step.tar.gz" ]; then
+            echo "📦 Restoring workspace state..."
+            cd /workspace
+            tar -xzf "$CHECKPOINT_DIR/workspace-$step.tar.gz"
+        fi
+        
+        echo "✅ Checkpoint loaded from step: $step"
+        return 0
+    }
+    
+    # Function to clean checkpoints
+    clean_checkpoints() {
+        echo "🧹 Cleaning old checkpoints..."
+        find "$CHECKPOINT_DIR" -name "workspace-*.tar.gz" -mtime +7 -delete
+        echo "✅ Cleanup complete"
+    }
+    
+    # Main execution
+    case "$1" in
+        save)
+            save_checkpoint "$2" "$3"
+            ;;
+        load)
+            load_checkpoint
+            ;;
+        clean)
+            clean_checkpoints
+            ;;
+        *)
+            echo "Usage: $0 {save|load|clean} [step] [data]"
+            exit 1
+            ;;
+    esac
+  
+  resume.sh: |
+    #!/bin/bash
+    # Resume logic for interrupted swarm tasks
+    
+    CHECKPOINT_FILE="/swarm-state/checkpoint.json"
+    
+    if [ ! -f "$CHECKPOINT_FILE" ]; then
+        echo "❌ No checkpoint file found, starting fresh"
+        exit 0
+    fi
+    
+    echo "🔄 Resuming swarm task from checkpoint..."
+    
+    # Load checkpoint data
+    CHECKPOINT_STEP=$(jq -r '.step' "$CHECKPOINT_FILE")
+    TASK_NAME=$(jq -r '.environment.task_name' "$CHECKPOINT_FILE")
+    SWARM_ID=$(jq -r '.environment.swarm_id' "$CHECKPOINT_FILE")
+    
+    echo "📊 Resume Information:"
+    echo "  Task: $TASK_NAME"
+    echo "  Swarm: $SWARM_ID"
+    echo "  Last Step: $CHECKPOINT_STEP"
+    
+    # Export environment variables
+    export TASK_NAME
+    export SWARM_ID
+    export RESUME_FROM_STEP="$CHECKPOINT_STEP"
+    
+    # Load the checkpoint
+    /scripts/checkpoint.sh load
+    
+    echo "✅ Ready to resume execution from step: $CHECKPOINT_STEP"
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: swarm-operator
+  namespace: swarm-system
+  labels:
+    app: swarm-operator
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: swarm-operator
+  template:
+    metadata:
+      labels:
+        app: swarm-operator
+    spec:
+      serviceAccountName: swarm-operator
+      containers:
+      - name: operator
+        image: liamhelmer/swarm-operator:2.0.0
+        imagePullPolicy: Always
+        command: ["/swarm-operator"]
+        env:
+        - name: OPERATOR_NAMESPACE
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.namespace
+        - name: OPERATOR_NAME
+          value: "swarm-operator"
+        - name: ENABLE_WEBHOOKS
+          value: "false"
+        - name: WATCHED_NAMESPACES
+          value: "claude-flow-swarm,claude-flow-hivemind"
+        - name: DEFAULT_SWARM_NAMESPACE
+          value: "claude-flow-swarm"
+        - name: DEFAULT_HIVEMIND_NAMESPACE
+          value: "claude-flow-hivemind"
+        - name: EXECUTOR_IMAGE
+          value: "liamhelmer/swarm-executor:2.0.0"
+        ports:
+        - containerPort: 8080
+          name: metrics
+          protocol: TCP
+        - containerPort: 8081
+          name: health
+          protocol: TCP
+        livenessProbe:
+          httpGet:
+            path: /healthz
+            port: 8081
+          initialDelaySeconds: 15
+          periodSeconds: 20
+        readinessProbe:
+          httpGet:
+            path: /readyz
+            port: 8081
+          initialDelaySeconds: 5
+          periodSeconds: 10
+        resources:
+          requests:
+            cpu: 100m
+            memory: 128Mi
+          limits:
+            cpu: 500m
+            memory: 512Mi
+        securityContext:
+          allowPrivilegeEscalation: false
+          readOnlyRootFilesystem: true
+          runAsNonRoot: true
+          runAsUser: 65532
+          capabilities:
+            drop:
+            - ALL
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: swarm-operator-metrics
+  namespace: swarm-system
+  labels:
+    app: swarm-operator
+spec:
+  ports:
+  - name: metrics
+    port: 8080
+    targetPort: 8080
+  - name: health
+    port: 8081
+    targetPort: 8081
+  selector:
+    app: swarm-operator
+---
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: swarm-operator
+  namespace: swarm-system
+spec:
+  minAvailable: 1
+  selector:
+    matchLabels:
+      app: swarm-operator

@@ -1,0 +1,112 @@
+# Complete test deployment with all components
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: claude-flow-test
+---
+# Test SwarmCluster
+apiVersion: swarm.claudeflow.io/v1alpha1
+kind: SwarmCluster
+metadata:
+  name: test-cluster-complete
+  namespace: claude-flow-test
+spec:
+  topology: mesh
+  minAgents: 2
+  maxAgents: 5
+  queenMode: single
+  strategy: balanced
+  namespaceConfig:
+    swarmNamespace: claude-flow-test
+    hiveMindNamespace: claude-flow-test
+    createNamespaces: false
+  agentTemplate:
+    image: "liamhelmer/swarm-executor:2.0.0"
+    capabilities:
+      - code-analysis
+      - pattern-recognition
+    resources:
+      cpu: "100m"
+      memory: "128Mi"
+  monitoring:
+    enabled: true
+    metricsPort: 9090
+---
+# Test SwarmTask
+apiVersion: swarm.claudeflow.io/v1alpha1
+kind: SwarmTask
+metadata:
+  name: test-task-complete
+  namespace: claude-flow-test
+spec:
+  swarmCluster: test-cluster-complete
+  type: analysis
+  description: "Complete system test task"
+  parameters:
+    action: "test"
+    message: "Testing complete deployment"
+  subtasks:
+  - name: test-subtask
+    type: code-review
+    description: "Test subtask"
+    requiredCapabilities:
+      - pattern-recognition
+---
+# Manual test agent to verify functionality
+apiVersion: v1
+kind: Pod
+metadata:
+  name: manual-test-agent
+  namespace: claude-flow-test
+  labels:
+    app: swarm-agent
+    cluster: test-cluster-complete
+spec:
+  containers:
+  - name: agent
+    image: liamhelmer/swarm-executor:2.0.0
+    command: ["/bin/bash", "-c"]
+    args:
+    - |
+      echo "🐝 Manual Test Agent Starting"
+      echo "Cluster: test-cluster-complete"
+      echo "Namespace: claude-flow-test"
+      
+      # Simple test loop
+      while true; do
+        echo "$(date): Agent is running..."
+        sleep 30
+      done
+    resources:
+      requests:
+        cpu: "100m"
+        memory: "128Mi"
+---
+# RBAC for test namespace
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: swarm-test-role
+  namespace: claude-flow-test
+rules:
+- apiGroups: [""]
+  resources: ["pods", "services", "configmaps"]
+  verbs: ["get", "list", "watch", "create", "update", "patch", "delete"]
+- apiGroups: ["swarm.claudeflow.io"]
+  resources: ["*"]
+  verbs: ["*"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: swarm-test-binding
+  namespace: claude-flow-test
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: swarm-test-role
+subjects:
+- kind: ServiceAccount
+  name: default
+  namespace: claude-flow-test

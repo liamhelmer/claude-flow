@@ -1,0 +1,26 @@
+apiVersion: swarm.claudeflow.io/v1alpha1
+kind: SwarmCluster
+metadata:
+  name: test-cluster
+  namespace: claude-flow-swarm
+spec:
+  topology: mesh
+  minAgents: 1
+  maxAgents: 3
+  queenMode: single
+  strategy: balanced
+  namespaceConfig:
+    swarmNamespace: claude-flow-swarm
+    hiveMindNamespace: claude-flow-hivemind
+    createNamespaces: false
+  agentTemplate:
+    image: "liamhelmer/swarm-executor:2.0.0"
+    capabilities:
+      - code-analysis
+      - pattern-recognition
+    resources:
+      cpu: "100m"
+      memory: "128Mi"
+  monitoring:
+    enabled: true
+    metricsPort: 9090

@@ -1,0 +1,442 @@
+# Complete set of CRDs for Claude Flow Swarm Operator
+---
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  name: swarmclusters.swarm.claudeflow.io
+spec:
+  group: swarm.claudeflow.io
+  versions:
+  - name: v1alpha1
+    served: true
+    storage: true
+    schema:
+      openAPIV3Schema:
+        type: object
+        properties:
+          spec:
+            type: object
+            properties:
+              topology:
+                type: string
+                enum: ["mesh", "hierarchical", "ring", "star"]
+              minAgents:
+                type: integer
+                minimum: 1
+              maxAgents:
+                type: integer
+                minimum: 1
+              queenMode:
+                type: string
+                enum: ["single", "distributed", "rotating"]
+              strategy:
+                type: string
+                enum: ["balanced", "specialized", "adaptive"]
+              namespaceConfig:
+                type: object
+                properties:
+                  swarmNamespace:
+                    type: string
+                  hiveMindNamespace:
+                    type: string
+                  createNamespaces:
+                    type: boolean
+              memory:
+                type: object
+                properties:
+                  type:
+                    type: string
+                    enum: ["sqlite", "redis", "memory"]
+                  size:
+                    type: string
+                  persistence:
+                    type: boolean
+                  enableMemoryStore:
+                    type: boolean
+                  sqliteConfig:
+                    type: object
+              githubApp:
+                type: object
+                properties:
+                  appID:
+                    type: integer
+                  installationID:
+                    type: integer
+                  privateKeyRef:
+                    type: object
+                    properties:
+                      name:
+                        type: string
+                      key:
+                        type: string
+              agentTemplate:
+                type: object
+                properties:
+                  image:
+                    type: string
+                  capabilities:
+                    type: array
+                    items:
+                      type: string
+                  resources:
+                    type: object
+                    properties:
+                      cpu:
+                        type: string
+                      memory:
+                        type: string
+              autoscaling:
+                type: object
+                properties:
+                  enabled:
+                    type: boolean
+                  targetUtilization:
+                    type: integer
+                  metrics:
+                    type: array
+                    items:
+                      type: object
+              neural:
+                type: object
+                properties:
+                  enabled:
+                    type: boolean
+                  models:
+                    type: array
+                    items:
+                      type: object
+              monitoring:
+                type: object
+                properties:
+                  enabled:
+                    type: boolean
+                  metricsPort:
+                    type: integer
+          status:
+            type: object
+            properties:
+              phase:
+                type: string
+              activeAgents:
+                type: integer
+              totalTasks:
+                type: integer
+              completedTasks:
+                type: integer
+              memoryStoreReady:
+                type: boolean
+              conditions:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    type:
+                      type: string
+                    status:
+                      type: string
+                    reason:
+                      type: string
+                    message:
+                      type: string
+                    lastTransitionTime:
+                      type: string
+  scope: Namespaced
+  names:
+    plural: swarmclusters
+    singular: swarmcluster
+    kind: SwarmCluster
+    shortNames:
+    - sc
+---
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  name: swarmagents.swarm.claudeflow.io
+spec:
+  group: swarm.claudeflow.io
+  versions:
+  - name: v1alpha1
+    served: true
+    storage: true
+    schema:
+      openAPIV3Schema:
+        type: object
+        properties:
+          spec:
+            type: object
+            properties:
+              swarmCluster:
+                type: string
+              type:
+                type: string
+                enum: ["researcher", "coder", "analyst", "optimizer", "coordinator", "specialist"]
+              capabilities:
+                type: array
+                items:
+                  type: string
+              image:
+                type: string
+              resources:
+                type: object
+                properties:
+                  cpu:
+                    type: string
+                  memory:
+                    type: string
+              namespace:
+                type: string
+          status:
+            type: object
+            properties:
+              phase:
+                type: string
+              podName:
+                type: string
+              tasksCompleted:
+                type: integer
+              lastActivity:
+                type: string
+  scope: Namespaced
+  names:
+    plural: swarmagents
+    singular: swarmagent
+    kind: SwarmAgent
+    shortNames:
+    - sa
+---
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  name: swarmtasks.swarm.claudeflow.io
+spec:
+  group: swarm.claudeflow.io
+  versions:
+  - name: v1alpha1
+    served: true
+    storage: true
+    schema:
+      openAPIV3Schema:
+        type: object
+        properties:
+          spec:
+            type: object
+            properties:
+              swarmCluster:
+                type: string
+              type:
+                type: string
+              description:
+                type: string
+              namespace:
+                type: string
+              repositories:
+                type: array
+                items:
+                  type: string
+              githubApp:
+                type: object
+                properties:
+                  appID:
+                    type: integer
+                  installationID:
+                    type: integer
+                  privateKeyRef:
+                    type: object
+              parameters:
+                type: object
+                x-kubernetes-preserve-unknown-fields: true
+              subtasks:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    name:
+                      type: string
+                    type:
+                      type: string
+                    description:
+                      type: string
+                    requiredCapabilities:
+                      type: array
+                      items:
+                        type: string
+          status:
+            type: object
+            properties:
+              phase:
+                type: string
+              assignedAgents:
+                type: array
+                items:
+                  type: string
+              progress:
+                type: integer
+              startTime:
+                type: string
+              completionTime:
+                type: string
+              result:
+                type: string
+  scope: Namespaced
+  names:
+    plural: swarmtasks
+    singular: swarmtask
+    kind: SwarmTask
+    shortNames:
+    - st
+---
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  name: swarmmemories.swarm.claudeflow.io
+spec:
+  group: swarm.claudeflow.io
+  versions:
+  - name: v1alpha1
+    served: true
+    storage: true
+    schema:
+      openAPIV3Schema:
+        type: object
+        properties:
+          spec:
+            type: object
+            properties:
+              clusterRef:
+                type: string
+              namespace:
+                type: string
+              type:
+                type: string
+              key:
+                type: string
+              value:
+                type: string
+              ttl:
+                type: integer
+              tags:
+                type: array
+                items:
+                  type: string
+              priority:
+                type: integer
+              sharedWith:
+                type: array
+                items:
+                  type: string
+          status:
+            type: object
+            properties:
+              stored:
+                type: boolean
+              lastAccessed:
+                type: string
+              accessCount:
+                type: integer
+  scope: Namespaced
+  names:
+    plural: swarmmemories
+    singular: swarmmemory
+    kind: SwarmMemory
+    shortNames:
+    - sm
+---
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  name: swarmmemorystores.swarm.claudeflow.io
+spec:
+  group: swarm.claudeflow.io
+  versions:
+  - name: v1alpha1
+    served: true
+    storage: true
+    schema:
+      openAPIV3Schema:
+        type: object
+        properties:
+          spec:
+            type: object
+            properties:
+              type:
+                type: string
+                enum: ["sqlite", "redis", "memory"]
+              storageSize:
+                type: string
+              persistentVolume:
+                type: object
+                properties:
+                  enabled:
+                    type: boolean
+                  size:
+                    type: string
+                  storageClass:
+                    type: string
+              sqliteConfig:
+                type: object
+                properties:
+                  cacheSize:
+                    type: integer
+                  cacheMemoryMB:
+                    type: integer
+                  enableWAL:
+                    type: boolean
+                  enableVacuum:
+                    type: boolean
+                  gcInterval:
+                    type: string
+                  backupInterval:
+                    type: string
+                  compressionLevel:
+                    type: integer
+              redisConfig:
+                type: object
+                properties:
+                  maxMemory:
+                    type: string
+                  evictionPolicy:
+                    type: string
+              migration:
+                type: object
+                properties:
+                  enabled:
+                    type: boolean
+                  sourceType:
+                    type: string
+                  sourceConfig:
+                    type: object
+          status:
+            type: object
+            properties:
+              phase:
+                type: string
+              ready:
+                type: boolean
+              endpoint:
+                type: string
+              lastBackup:
+                type: string
+              storageUsed:
+                type: string
+              conditions:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    type:
+                      type: string
+                    status:
+                      type: string
+                    reason:
+                      type: string
+                    message:
+                      type: string
+                    lastTransitionTime:
+                      type: string
+  scope: Namespaced
+  names:
+    plural: swarmmemorystores
+    singular: swarmmemorystore
+    kind: SwarmMemoryStore
+    shortNames:
+    - sms

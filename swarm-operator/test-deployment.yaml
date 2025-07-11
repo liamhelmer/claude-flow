@@ -1,0 +1,92 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: test-script
+  namespace: claude-flow-swarm
+data:
+  test.sh: |
+    #!/bin/sh
+    echo "🐝 Swarm Test Pod Running"
+    echo "Namespace: $NAMESPACE"
+    echo "Pod Name: $POD_NAME" 
+    echo "Testing CRDs..."
+    
+    # Test listing swarm resources
+    echo ""
+    echo "SwarmClusters:"
+    kubectl get swarmclusters -A
+    
+    echo ""
+    echo "SwarmTasks:"
+    kubectl get swarmtasks -A
+    
+    echo ""
+    echo "SwarmAgents:"
+    kubectl get swarmagents -A
+    
+    # Keep running
+    while true; do
+      sleep 30
+      echo "Test pod still running at $(date)"
+    done
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: swarm-test
+  namespace: claude-flow-swarm
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: swarm-test
+  template:
+    metadata:
+      labels:
+        app: swarm-test
+    spec:
+      serviceAccountName: default
+      containers:
+      - name: test
+        image: bitnami/kubectl:latest
+        command: ["/bin/sh"]
+        args: ["/scripts/test.sh"]
+        env:
+        - name: NAMESPACE
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.namespace
+        - name: POD_NAME
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.name
+        volumeMounts:
+        - name: script
+          mountPath: /scripts
+      volumes:
+      - name: script
+        configMap:
+          name: test-script
+          defaultMode: 0755
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: swarm-test-reader
+rules:
+- apiGroups: ["swarm.claudeflow.io"]
+  resources: ["swarmclusters", "swarmtasks", "swarmagents", "swarmmemories", "swarmmemorystores"]
+  verbs: ["get", "list", "watch"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: swarm-test-reader
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: swarm-test-reader
+subjects:
+- kind: ServiceAccount
+  name: default
+  namespace: claude-flow-swarm

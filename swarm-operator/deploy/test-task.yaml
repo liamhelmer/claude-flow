@@ -1,0 +1,18 @@
+apiVersion: swarm.claudeflow.io/v1alpha1
+kind: SwarmTask
+metadata:
+  name: hello-world-task
+  namespace: claude-flow-swarm
+spec:
+  swarmCluster: test-cluster
+  type: analysis
+  description: "Test task to verify system functionality"
+  parameters:
+    message: "Hello from Claude Flow Swarm!"
+    action: "echo"
+  subtasks:
+  - name: hello-subtask
+    type: code-review
+    description: "Echo hello message"
+    requiredCapabilities:
+      - pattern-recognition
